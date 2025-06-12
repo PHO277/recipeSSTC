@@ -1,0 +1,86 @@
+# Python 相关
+*.py[cod]
+*$py.class
+__pycache__/
+*.so
+.Python
+env/
+venv/
+ENV/
+VENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 虚拟环境
+.venv/
+venv/
+ENV/
+env/
+
+# PyCharm 相关
+.idea/
+*.iml
+*.iws
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/vcs.xml
+.idea/jsLibraryMappings.xml
+
+# 环境变量和密钥
+.env
+.env.local
+.env.*.local
+secrets.toml
+.streamlit/secrets.toml
+
+# 操作系统相关
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# 日志文件
+*.log
+logs/
+*.log.*
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# 测试覆盖率
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# 构建文件
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 用户上传的文件（如果有）
+uploads/
+media/
+
+# 本地配置
+config.local.py
+settings.local.py
