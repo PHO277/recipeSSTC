@@ -172,7 +172,15 @@ LANGUAGES = {
             'version': '版本',
             'privacy_policy': '隐私政策',
             'terms_of_service': '服务条款',
-            'contact_us': '联系我们'
+            'contact_us': '联系我们',
+            'recipe_description': '食谱描述',
+            'instructions': '烹饪步骤',
+            'fiber': '纤维',
+            'sugar': '糖',
+            'sodium': '钠',
+            'vitamin_a': '维生素A',
+            'calcium': '钙',
+            'iron': '铁',
         }
     },
     'en': {
@@ -347,7 +355,15 @@ LANGUAGES = {
             'version': 'Version',
             'privacy_policy': 'Privacy Policy',
             'terms_of_service': 'Terms of Service',
-            'contact_us': 'Contact Us'
+            'contact_us': 'Contact Us',
+            'recipe_description': 'Recipe Description',
+            'instructions': 'Cooking Instructions',
+            'fiber': 'Fiber',
+            'sugar': 'Sugar',
+            'sodium': 'Sodium',
+            'vitamin_a': 'Vitamin A',
+            'calcium': 'Calcium',
+            'iron': 'Iron',
         }
     },
     'ja': {
@@ -389,7 +405,15 @@ LANGUAGES = {
             'version': 'バージョン',
             'privacy_policy': 'プライバシーポリシー',
             'terms_of_service': '利用規約',
-            'contact_us': 'お問い合わせ'
+            'contact_us': 'お問い合わせ',
+            'recipe_description': 'レシピの説明',
+            'instructions': '調理手順',
+            'fiber': '食物繊維',
+            'sugar': '砂糖',
+            'sodium': 'ナトリウム',
+            'vitamin_a': 'ビタミンA',
+            'calcium': 'カルシウム',
+            'iron': '鉄分',
         }
     }
 }

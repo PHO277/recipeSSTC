@@ -124,31 +124,49 @@ def render_generate_recipe():
                         servings=servings if 'servings' in locals() else 2
                     )
 
-                    nutrition_info = nutrition.parse_nutrition(llm_output)
-
-                    if "## Nutrition Facts" in llm_output:
-                        recipe = llm_output.split("## Nutrition Facts")[0].strip()
-                    else:
-                        recipe = llm_output.strip()
-
                     st.success(t('recipe_generated'))
-                    st.markdown(f'<div class="recipe-card">{recipe}</div>', unsafe_allow_html=True)
 
+                    # Display recipe title
+                    st.markdown(f"<h2 style='font-size: 1.8em;'>{llm_output['title']}</h2>", unsafe_allow_html=True)
+
+                    # Display recipe description
+                    st.markdown(f"### ℹ️ {t('recipe_description')}")
+                    st.markdown(llm_output['description'])
+
+                    # Display ingredients
+                    st.markdown(f"### 🥕 {t('ingredients')}")
+                    for ingredient in llm_output['ingredients']:
+                        st.markdown(f"- {ingredient}")
+
+                    # Display instructions
+                    st.markdown(f"### 🍳 {t('instructions')}")
+                    for i, step in enumerate(llm_output['instructions'], 1):
+                        st.markdown(f"{i}. {step}")
+                        
+                    # Display nutrition facts
                     st.markdown(f"### 🥗 {t('nutrition_facts')}")
-
+                    nutrition_info = nutrition.parse_nutrition(llm_output)
                     nutrition_dict = {}
                     for line in nutrition_info.split('\n'):
                         if ':' in line:
                             key, value = line.split(':', 1)
-                            nutrition_dict[key.strip().strip('-')] = value.strip()
+                            # Normalize the key by removing spaces and leading/trailing characters
+                            cleaned_key = key.strip().strip('-').replace(' ', '')
+                            nutrition_dict[cleaned_key] = value.strip()
 
-                    nutrition_dict = {key.strip(): value for key, value in nutrition_dict.items()}
+                    print(nutrition_dict)  # Debugging line to check nutrition_dict content
 
                     nutrition_items = [
                         ("🔥", t('calories'), nutrition_dict.get("Calories", "N/A")),
                         ("🥩", t('protein'), nutrition_dict.get("Protein", "N/A")),
                         ("🥑", t('fat'), nutrition_dict.get("Fat", "N/A")),
-                        ("🌾", t('carbs'), nutrition_dict.get("Carbohydrates", "N/A"))
+                        ("🌾", t('carbs'), nutrition_dict.get("Carbohydrates", "N/A")),
+                        ("🌱", t('fiber'), nutrition_dict.get("Fiber", "N/A")),
+                        ("🍬", t('sugar'), nutrition_dict.get("Sugar", "N/A")),
+                        ("🧂", t('sodium'), nutrition_dict.get("Sodium", "N/A")),
+                        ("🧬", t('vitamin_a'), nutrition_dict.get("VitaminA", "N/A")),  # Normalized key
+                        ("🦴", t('calcium'), nutrition_dict.get("Calcium", "N/A")),
+                        ("🩺", t('iron'), nutrition_dict.get("Iron", "N/A"))
                     ]
 
                     for icon, label, value in nutrition_items:
@@ -159,6 +177,12 @@ def render_generate_recipe():
                         </div>
                         '''
                         st.markdown(nutrition_html, unsafe_allow_html=True)
+
+                    # Display additional recipe information
+                    st.markdown(f"**{t('serves')}**: {llm_output['serves']}")
+                    st.markdown(f"**{t('prep_time')}**: {llm_output['prep_time']}")
+                    st.markdown(f"**{t('cook_time')}**: {llm_output['cook_time']}")
+                    st.markdown(f"**{t('difficulty')}**: {llm_output['difficulty']}")
 
                     st.markdown("---")
                     st.markdown(f"### 💾 {t('save_options')}")
@@ -185,18 +209,21 @@ def render_generate_recipe():
                     with col_action1:
                         if st.button(t('save_recipe'), type="primary", use_container_width=True):
                             recipe_data = {
-                                "ingredients": ingredients,
-                                "diet": diet,
-                                "goal": goal,
-                                "recipe": recipe,
+                                "title": llm_output['title'],
+                                "description": llm_output['description'],
+                                "ingredients": llm_output['ingredients'],
+                                "instructions": llm_output['instructions'],
                                 "nutrition": nutrition_info,
+                                "serves": llm_output['serves'],
+                                "prep_time": llm_output['prep_time'],
+                                "cook_time": llm_output['cook_time'],
+                                "difficulty": llm_output['difficulty'],
                                 "rating": rating,
                                 "tags": [tag.strip() for tag in tags_input.split(',') if tag.strip()],
                                 "notes": notes,
                                 "cuisine": cuisine if 'cuisine' in locals() else "",
-                                "cooking_time": cooking_time if 'cooking_time' in locals() else "",
-                                "difficulty": difficulty if 'difficulty' in locals() else "",
-                                "servings": servings if 'servings' in locals() else 2
+                                "diet": diet,
+                                "goal": goal
                             }
 
                             recipe_id = st.session_state.db.save_recipe(st.session_state.username, recipe_data)
@@ -208,14 +235,29 @@ def render_generate_recipe():
                             {t('recipe')}
                             {'=' * 50}
 
-                            {recipe}
+                            {t('recipe_title')}: {llm_output['title']}
+
+                            {t('recipe_description')}
+                            {'-' * 50}
+                            {llm_output['description']}
+
+                            {t('ingredients')}
+                            {'-' * 50}
+                            {chr(10).join(f'- {ingredient}' for ingredient in llm_output['ingredients'])}
+
+                            {t('instructions')}
+                            {'-' * 50}
+                            {chr(10).join(f'{i}. {step}' for i, step in enumerate(llm_output['instructions'], 1))}
 
                             {t('nutrition_facts')}
-                            {'=' * 50}
-
+                            {'-' * 50}
                             {nutrition_info}
 
                             ---
+                            {t('serves')}: {llm_output['serves']}
+                            {t('prep_time')}: {llm_output['prep_time']}
+                            {t('cook_time')}: {llm_output['cook_time']}
+                            {t('difficulty')}: {llm_output['difficulty']}
                             {t('generated_on')}: {datetime.now().strftime('%Y-%m-%d %H:%M')}
                             {t('ingredients')}: {ingredients}
                             {t('diet_preference')}: {diet}
