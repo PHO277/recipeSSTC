@@ -508,9 +508,10 @@ else:
                                 key, value = line.split(':', 1)
                                 nutrition_dict[key.strip().strip('-')] = value.strip()
 
-                        # 营养信息网格
-                        nutrition_html = '<div class="nutrition-grid">'
+                        # 去除键名前空格
+                        nutrition_dict = {key.strip(): value for key, value in nutrition_dict.items()}
 
+                        # 营养信息网格
                         nutrition_items = [
                             ("🔥", t('calories'), nutrition_dict.get("Calories", "N/A")),
                             ("🥩", t('protein'), nutrition_dict.get("Protein", "N/A")),
@@ -518,17 +519,15 @@ else:
                             ("🌾", t('carbs'), nutrition_dict.get("Carbohydrates", "N/A"))
                         ]
 
+                        # 单独渲染每个营养项
                         for icon, label, value in nutrition_items:
-                            nutrition_html += f'''
-                            <div class="nutrition-item">
-                                <div style="font-size: 2rem;">{icon}</div>
-                                <div style="font-weight: bold;">{label}</div>
-                                <div>{value}</div>
+                            nutrition_html = f'''
+                            <div class="nutrition-item" style="background-color: #e6f3ff; padding: 10px; margin: 5px; border-radius: 5px; display: inline-block;">
+                                <span style="font-size: 1.5em;">{icon}</span>
+                                <strong>{label}:</strong> {value}
                             </div>
                             '''
-
-                        nutrition_html += '</div>'
-                        st.markdown(nutrition_html, unsafe_allow_html=True)
+                            st.markdown(nutrition_html, unsafe_allow_html=True)
 
                         # 保存和操作区域
                         st.markdown("---")
