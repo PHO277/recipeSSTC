@@ -4,7 +4,7 @@ class LLMInterface:
     def __init__(self, api_key):
         self.client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
-    def generate_recipe_and_nutrition(self, ingredients, diet, goal):
+    def generate_recipe_and_nutrition(self, ingredients, diet, goal, language="en", cuisine=None, cooking_time=None, difficulty=None, servings=2):
         # Enhanced prompt for better formatting and more comprehensive recipes
         prompt = f"""
         You are a professional chef and certified nutritionist with expertise in creating delicious, healthy recipes. 
