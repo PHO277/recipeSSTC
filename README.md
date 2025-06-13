@@ -1,1 +1,1 @@
-小组作业for Advanced Apllication Studio A
+小组作业for Advanced Application Studio A
