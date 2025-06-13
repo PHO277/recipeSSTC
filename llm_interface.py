@@ -85,27 +85,3 @@ class LLMInterface:
             
         except Exception as e:
             raise Exception(f"API call failed: {str(e)}.")
-
-    def get_recipe_suggestions(self, ingredients):
-        """Get quick recipe name suggestions based on ingredients"""
-        prompt = f"""
-        Based on these ingredients: {ingredients}
-        
-        Suggest 3 creative recipe names that could be made with these ingredients. 
-        Respond with just the names, one per line, no additional formatting.
-        """
-        
-        try:
-            response = self.client.chat.completions.create(
-                model="deepseek-chat",
-                messages=[
-                    {"role": "system", "content": "You are a creative chef who suggests innovative recipe names."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=1.0,
-                max_tokens=150,
-                stream=False
-            )
-            return response.choices[0].message.content.strip().split('\n')
-        except:
-            return [f"Delicious {ingredients.split(',')[0].strip().title()} Dish"]
