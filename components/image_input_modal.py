@@ -8,31 +8,26 @@ from PIL import Image # type: ignore
 import io
 from utils.translations import get_translation
 import re
+import concurrent.futures
+import threading
+from typing import List, Dict, Tuple
 
 class ImageInputModal:
     def __init__(self):
         self.api_key = st.secrets.get("SILICONFLOW_API_KEY", os.getenv("SILICONFLOW_API_KEY"))
         self.api_url = "https://api.siliconflow.cn/v1/chat/completions"
         self.model = "Qwen/Qwen2.5-VL-32B-Instruct"
+        self.max_workers = 20  # 最大并发线程数
     
-    def encode_image_to_base64(self, uploaded_file):
-        """将上传的文件转换为base64字符串"""
-        try:
-            # Read the file content first
-            file_content = uploaded_file.read()
-            # Then create an image from the bytes
-            image = Image.open(io.BytesIO(file_content))
-            # Convert to JPEG format in memory
-            buffered = io.BytesIO()
-            image.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            return img_str
-        except Exception as e:
-            print(f"Error processing image {uploaded_file.name}: {str(e)}")
-            raise
+    def encode_image_to_base64(self, image):
+        """将PIL图像转换为base64字符串"""
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        return img_str
     
-    def call_siliconflow_api(self, images, language):
-        """调用SILICONFLOW API识别食材"""
+    def call_siliconflow_api_single(self, image_base64: str, language: str, image_name: str = "") -> Tuple[str, List[str]]:
+        """为单张图片调用SILICONFLOW API识别食材"""
         if not self.api_key:
             raise Exception("SILICONFLOW_API_KEY not found")
         
@@ -40,27 +35,26 @@ class ImageInputModal:
         content = []
         
         # 统一的英语提示词，要求使用指定语言回复但保持JSON字段为英文
-        unified_prompt = f"""Please identify all unique ingredients in the image and return them in a JSON format. 
-        Requirements:
-        1. Respond in {language} language for the ingredient names
-        2. Always use "ingredients" as the JSON field name (in English)
-        3. Return only unique ingredients (no duplicates)
-        4. Format: {{"ingredients": ["ingredient1", "ingredient2", ...]}}
-        5. If no ingredients are found, return {{"ingredients": []}}"""
+        unified_prompt = f"""Please identify all unique ingredients in this image and return them in a JSON format.
+Requirements:
+1. Respond in {language} language for the ingredient names
+2. Always use "ingredients" as the JSON field name (in English)
+3. Return only unique ingredients visible in this image (no duplicates)
+4. Format: {{"ingredients": ["ingredient1", "ingredient2", ...]}}
+5. If no ingredients are found in the image, return {{"ingredients": []}}"""
         
         content.append({
             "type": "text",
             "text": unified_prompt
         })
         
-        # 添加图像
-        for img_base64 in images:
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{img_base64}"
-                }
-            })
+        # 添加单张图像
+        content.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{image_base64}"
+            }
+        })
         
         payload = {
             "model": self.model,
@@ -81,68 +75,217 @@ class ImageInputModal:
             "Content-Type": "application/json"
         }
         
-        response = requests.post(self.api_url, json=payload, headers=headers)
+        try:
+            response = requests.post(self.api_url, json=payload, headers=headers, timeout=30)
+            
+            print(f"图片 {image_name} API调用状态: {response.status_code}")  # 调试输出
 
-        print(response.status_code, response.text)  # 调试输出
-
-        if response.status_code == 200:
-            try:
-                raw_content = response.json()['choices'][0]['message']['content']
-                
-                # 尝试从 ```json ... ``` 块中提取JSON内容
-                json_match = re.search(r'```json\n(.*?)\n```', raw_content, re.DOTALL)
-                if json_match:
-                    json_content = json_match.group(1)
-                else:
-                    # 如果没有找到 ```json``` 块，假设 raw_content 本身是 JSON
-                    json_content = raw_content.strip()
-                
-                # 尝试解析JSON
+            if response.status_code == 200:
                 try:
-                    ingredients_data = json.loads(json_content)
-                    return ingredients_data.get('ingredients', [])
-                except json.JSONDecodeError as e:
-                    # 如果JSON解析失败，尝试修复可能的截断问题
-                    print(f"JSON解析错误，尝试修复可能截断的响应: {e}")
+                    raw_content = response.json()['choices'][0]['message']['content']
+                    ingredients = self._parse_ingredients_from_response(raw_content)
+                    print(f"图片 {image_name} 识别到的食材: {ingredients}")
+                    return image_name, ingredients
                     
-                    # 尝试提取可能的JSON部分
-                    json_start = json_content.find('{')
-                    json_end = json_content.rfind('}')
+                except Exception as e:
+                    print(f"图片 {image_name} API响应解析错误: {str(e)}")
+                    return image_name, []
+            else:
+                print(f"图片 {image_name} API调用失败: {response.status_code} - {response.text}")
+                return image_name, []
+                
+        except requests.exceptions.Timeout:
+            print(f"图片 {image_name} API调用超时")
+            return image_name, []
+        except Exception as e:
+            print(f"图片 {image_name} API调用异常: {str(e)}")
+            return image_name, []
+    
+    def _parse_ingredients_from_response(self, raw_content: str) -> List[str]:
+        """从API响应中解析食材列表"""
+        try:
+            # 预处理：清理可能的截断问题
+            raw_content = raw_content.strip()
+            
+            # 尝试从 ```json ... ``` 块中提取JSON内容
+            json_match = re.search(r'```json\n(.*?)\n```', raw_content, re.DOTALL)
+            if json_match:
+                json_content = json_match.group(1)
+            else:
+                # 如果没有找到 ```json``` 块，假设 raw_content 本身是 JSON
+                json_content = raw_content.strip()
+            
+            # 尝试解析JSON
+            try:
+                ingredients_data = json.loads(json_content)
+                ingredients = ingredients_data.get('ingredients', [])
+                
+                # 清理食材列表中的重复项和空值
+                cleaned_ingredients = []
+                seen = set()
+                for ingredient in ingredients:
+                    if isinstance(ingredient, str):
+                        # 清理换行符、制表符和多余空格
+                        cleaned = re.sub(r'\s+', ' ', ingredient.strip())
+                        if cleaned and cleaned not in seen:
+                            cleaned_ingredients.append(cleaned)
+                            seen.add(cleaned)
+                
+                return cleaned_ingredients
+                
+            except json.JSONDecodeError as e:
+                # 如果JSON解析失败，尝试修复可能的截断问题
+                print(f"JSON解析错误，尝试修复: {e}")
+                print(f"原始内容: {repr(json_content)}")
+                
+                # 尝试提取可能的JSON部分
+                json_start = json_content.find('{')
+                json_end = json_content.rfind('}')
+                
+                if json_start != -1 and json_end != -1 and json_end > json_start:
+                    # 提取看起来像JSON的部分
+                    possible_json = json_content[json_start:json_end+1]
                     
-                    if json_start != -1 and json_end != -1 and json_end > json_start:
-                        # 提取看起来像JSON的部分
-                        possible_json = json_content[json_start:json_end+1]
+                    # 尝试修复常见的截断问题
+                    if '"ingredients":' in possible_json:
+                        # 检查数组是否完整
+                        array_start = possible_json.find('[', possible_json.find('"ingredients":'))
+                        if array_start != -1:
+                            # 查找数组结束位置
+                            bracket_count = 0
+                            array_end = -1
+                            for i in range(array_start, len(possible_json)):
+                                if possible_json[i] == '[':
+                                    bracket_count += 1
+                                elif possible_json[i] == ']':
+                                    bracket_count -= 1
+                                    if bracket_count == 0:
+                                        array_end = i
+                                        break
+                            
+                            if array_end == -1:
+                                # 数组没有正确结束，尝试修复
+                                if possible_json.endswith('"') or possible_json.endswith('",'):
+                                    possible_json = possible_json.rstrip('",') + '"]}'
+                                elif not possible_json.endswith(']'):
+                                    possible_json = possible_json.rstrip() + ']}'
+                                else:
+                                    possible_json = possible_json + '}'
+                    
+                    try:
+                        ingredients_data = json.loads(possible_json)
+                        ingredients = ingredients_data.get('ingredients', [])
                         
-                        # 尝试补全可能的缺失部分
-                        if '"ingredients":' in possible_json and ']' not in possible_json:
-                            # 如果缺少闭合的数组和对象
-                            possible_json = possible_json.rstrip() + ']}'
-                        elif '"ingredients":' in possible_json and possible_json.endswith('"'):
-                            # 如果缺少闭合的数组和对象，但最后一个字符是引号
-                            possible_json = possible_json.rstrip('"') + '"]}'
+                        # 清理结果
+                        cleaned_ingredients = []
+                        seen = set()
+                        for ingredient in ingredients:
+                            if isinstance(ingredient, str):
+                                cleaned = re.sub(r'\s+', ' ', ingredient.strip())
+                                if cleaned and cleaned not in seen:
+                                    cleaned_ingredients.append(cleaned)
+                                    seen.add(cleaned)
                         
-                        try:
-                            ingredients_data = json.loads(possible_json)
-                            return ingredients_data.get('ingredients', [])
-                        except json.JSONDecodeError:
-                            pass
+                        return cleaned_ingredients
+                        
+                    except json.JSONDecodeError:
+                        print("修复后的JSON仍然无法解析")
+                
+                # 如果修复失败，尝试正则表达式提取
+                ingredients_list = []
+                # 查找引号包围的文本，但排除 "ingredients" 字段名
+                ingredient_pattern = r'"([^"]+)"'
+                matches = re.findall(ingredient_pattern, json_content)
+                
+                for match in matches:
+                    # 过滤掉字段名和非食材内容
+                    if match.lower() not in ['ingredients', 'ingredient'] and len(match) > 1:
+                        cleaned = re.sub(r'\s+', ' ', match.strip())
+                        if cleaned and cleaned not in ingredients_list:
+                            ingredients_list.append(cleaned)
+                
+                return ingredients_list
+                
+        except Exception as e:
+            print(f"解析响应内容时发生错误: {str(e)}")
+            print(f"原始内容: {repr(raw_content)}")
+            return []
+    
+    def call_siliconflow_api_parallel(self, images_data: List[Tuple[str, str]], language: str) -> Dict[str, List[str]]:
+        """并行调用SILICONFLOW API识别多张图片的食材"""
+        results = {}
+        results_lock = threading.Lock()  # 添加线程锁保护结果字典
+        
+        # 使用线程池并行处理
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # 提交所有任务，确保每个任务都有唯一标识
+            future_to_image = {}
+            for idx, (image_name, image_base64) in enumerate(images_data):
+                # 为每张图片创建唯一标识，避免重复文件名问题
+                unique_image_name = f"{image_name}_{idx}" if image_name else f"image_{idx}"
+                future = executor.submit(self.call_siliconflow_api_single, image_base64, language, unique_image_name)
+                future_to_image[future] = (unique_image_name, image_name)  # 保存原始名称用于显示
+            
+            # 收集结果
+            completed_count = 0
+            for future in concurrent.futures.as_completed(future_to_image):
+                unique_image_name, original_image_name = future_to_image[future]
+                try:
+                    result_name, ingredients = future.result()
                     
-                    # 如果修复失败，尝试更简单的提取方式
-                    ingredients_list = []
-                    # 查找类似 "ingredient" 的文本模式
-                    ingredient_matches = re.findall(r'"(?!ingredients)[^"]+"', json_content)
-                    if ingredient_matches:
-                        ingredients_list = [match.strip('"') for match in ingredient_matches]
-                    
-                    if ingredients_list:
-                        return ingredients_list
-                    
-                    # 如果所有方法都失败，返回空列表
-                    return []
-                    
-            except Exception as e:
-                print(f"API错误: {str(e)}")
-                raise Exception(f"API调用失败: {str(e)}")
+                    # 使用线程锁保护结果字典的写入
+                    with results_lock:
+                        # 使用原始文件名作为显示键名，但确保不重复
+                        display_name = original_image_name
+                        counter = 1
+                        while display_name in results:
+                            display_name = f"{original_image_name}_{counter}"
+                            counter += 1
+                        
+                        results[display_name] = ingredients
+                        completed_count += 1
+                        print(f"完成处理 ({completed_count}/{len(images_data)}): {display_name} -> {len(ingredients)} 个食材")
+                        
+                except Exception as e:
+                    print(f"处理图片 {unique_image_name} 时发生错误: {str(e)}")
+                    with results_lock:
+                        results[original_image_name] = []
+        
+        print(f"并行处理完成，共处理 {len(results)} 张图片")
+        return results
+    
+    def merge_ingredients_from_results(self, results: Dict[str, List[str]]) -> List[str]:
+        """合并多张图片的识别结果，去重并返回唯一食材列表"""
+        all_ingredients = set()
+        total_ingredient_count = 0
+        
+        print(f"开始合并 {len(results)} 张图片的识别结果...")
+        
+        for image_name, ingredients in results.items():
+            if ingredients:
+                #print(f"图片 '{image_name}' 贡献的食材 ({len(ingredients)}个): {ingredients}")
+                # 清理食材名称，去除可能的特殊字符和重复项
+                cleaned_ingredients = []
+                for ingredient in ingredients:
+                    # 清理换行符和多余空格
+                    cleaned = ingredient.strip().replace('\n', '').replace('\r', '')
+                    if cleaned and cleaned not in cleaned_ingredients:
+                        cleaned_ingredients.append(cleaned)
+                
+                all_ingredients.update(cleaned_ingredients)
+                total_ingredient_count += len(cleaned_ingredients)
+            else:
+                print(f"图片 '{image_name}': 未识别到食材")
+        
+        # 转换为列表并排序
+        unique_ingredients = sorted(list(all_ingredients))
+        
+        print(f"合并统计:")
+        print(f"- 总计识别到食材: {total_ingredient_count} 个")
+        print(f"- 去重后唯一食材: {len(unique_ingredients)} 个")
+        print(f"- 最终食材列表: {unique_ingredients}")
+        
+        return unique_ingredients
     
     def render_modal(self):
         """渲染图像输入模态窗口"""
@@ -156,6 +299,8 @@ class ImageInputModal:
             st.session_state.recognized_ingredients = []
         if 'ingredient_selections' not in st.session_state:
             st.session_state.ingredient_selections = {}
+        if 'recognition_results' not in st.session_state:
+            st.session_state.recognition_results = {}
         
         # 图像识别按钮
         if st.button("📷 " + t('image_recognition'), key="image_btn"):
@@ -163,6 +308,7 @@ class ImageInputModal:
             st.session_state.uploaded_images = []
             st.session_state.recognized_ingredients = []
             st.session_state.ingredient_selections = {}
+            st.session_state.recognition_results = {}
         
         # 模态窗口
         if st.session_state.show_image_modal:
@@ -210,52 +356,95 @@ class ImageInputModal:
                         if st.button(t('start_recognition'), type="primary", disabled=not st.session_state.uploaded_images):
                             with st.spinner(t('recognizing_ingredients')):
                                 try:
-                                    # 转换图像为base64
-                                    images_base64 = []
-                                    for uploaded_file in st.session_state.uploaded_images:
+                                    # 准备图像数据
+                                    images_data = []
+                                    for idx, uploaded_file in enumerate(st.session_state.uploaded_images):
                                         try:
-                                            img_base64 = self.encode_image_to_base64(uploaded_file)
-                                            images_base64.append(img_base64)
+                                            image = Image.open(uploaded_file)
+                                            # 调整图像大小以减少API调用成本
+                                            image.thumbnail((800, 600), Image.Resampling.LANCZOS)
+                                            img_base64 = self.encode_image_to_base64(image)
+                                            # 使用索引确保文件名唯一性
+                                            unique_name = f"{uploaded_file.name}_{idx}" if uploaded_file.name else f"image_{idx}"
+                                            images_data.append((uploaded_file.name, img_base64))  # 保持原始名称用于API调用
                                         except Exception as e:
-                                            st.error(f"无法处理图像 {uploaded_file.name}: {str(e)}")
+                                            st.error(f"处理图像 {uploaded_file.name} 时出错: {str(e)}")
                                             continue
                                     
-                                    if not images_base64:
+                                    if not images_data:
                                         st.error(t('no_valid_images'))
                                         return
                                     
-                                    # 调用API识别食材
-                                    ingredients = self.call_siliconflow_api(images_base64, st.session_state.language)
-                                    if not ingredients:  # 明确检查API返回的食材列表是否为空
+                                    # 创建进度展示
+                                    progress_text = f"正在并行处理 {len(images_data)} 张图片..."
+                                    progress_bar = st.progress(0, text=progress_text)
+                                    
+                                    # 并行调用API识别食材
+                                    recognition_results = self.call_siliconflow_api_parallel(images_data, st.session_state.language)
+                                    st.session_state.recognition_results = recognition_results
+                                    
+                                    progress_bar.progress(50, text="正在合并识别结果...")
+                                    
+                                    # 合并所有图片的识别结果
+                                    all_ingredients = self.merge_ingredients_from_results(recognition_results)
+                                    
+                                    progress_bar.progress(100, text="识别完成!")
+                                    
+                                    if not all_ingredients:
                                         st.warning(t('no_ingredients_detected'))
+                                        # 显示每张图片的详细结果
+                                        st.markdown("**各图片识别详情:**")
+                                        for image_name, ingredients in recognition_results.items():
+                                            if ingredients:
+                                                st.write(f"- {image_name}: {', '.join(ingredients)}")
+                                            else:
+                                                st.write(f"- {image_name}: 未识别到食材")
                                         return
-                                    st.session_state.recognized_ingredients = ingredients
+                                    
+                                    st.session_state.recognized_ingredients = all_ingredients
                                     
                                     # 初始化选择状态（默认全不选）
                                     st.session_state.ingredient_selections = {
-                                        ingredient: False for ingredient in ingredients
+                                        ingredient: False for ingredient in all_ingredients
                                     }
+                                    
+                                    # 清除进度条
+                                    progress_bar.empty()
                                     st.rerun()
                                     
                                 except Exception as e:
                                     st.error(f"{t('recognition_error')}: {str(e)}")
                     
-                    with col2:
+                    with col3:
                         if st.button(t('cancel')):
                             st.session_state.show_image_modal = False
                             st.rerun()
                 
                 # 如果有识别结果，显示食材选择界面
                 else:
-                    
                     st.markdown(f"**{t('recognized_ingredients')}:**")
                     
+                    '''
+                    # 显示识别统计信息
+                    if st.session_state.recognition_results:
+                        with st.expander("📊 识别详情", expanded=False):
+                            total_images = len(st.session_state.recognition_results)
+                            successful_images = sum(1 for ingredients in st.session_state.recognition_results.values() if ingredients)
+                            total_ingredients = len(st.session_state.recognized_ingredients)
+                            
+                            st.write(f"- 处理图片数量: {total_images}")
+                            st.write(f"- 成功识别图片: {successful_images}")
+                            st.write(f"- 识别到的唯一食材数量: {total_ingredients}")
+                            
+                            st.markdown("**各图片详细结果:**")
+                            for image_name, ingredients in st.session_state.recognition_results.items():
+                                if ingredients:
+                                    st.write(f"- **{image_name}**: {', '.join(ingredients)}")
+                                else:
+                                    st.write(f"- **{image_name}**: 未识别到食材")'''
+                    
                     # 显示食材复选框（每行4个）
-                    # 使用集合来存储已识别的食材，自动去重
-                    unique_ingredients = set(st.session_state.recognized_ingredients)
-
-                    # 转换为列表以便按顺序显示
-                    ingredients_list = list(unique_ingredients)
+                    ingredients_list = st.session_state.recognized_ingredients
 
                     # 显示复选框
                     for i in range(0, len(ingredients_list), 4):
