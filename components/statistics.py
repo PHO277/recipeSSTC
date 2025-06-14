@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st # type: ignore
 from datetime import datetime
 from collections import Counter
 from utils.translations import get_translation

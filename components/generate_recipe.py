@@ -1,26 +1,42 @@
-import streamlit as st
+import streamlit as st # type: ignore
 import os
 from datetime import datetime
 import random
 from llm_interface import LLMInterface
 from nutrition_analyzer import NutritionAnalyzer
 from utils.translations import get_translation
+from components.image_input_modal import ImageInputModal
 
 def render_generate_recipe():
     t = lambda key: get_translation(key, st.session_state.language)
+
+    # 初始化图像输入模态窗口
+    image_modal = ImageInputModal()
 
     col1, col2 = st.columns([2, 3])
 
     with col1:
         st.markdown(f"### 📝 {t('recipe_params')}")
 
+        # 渲染图像输入模态窗口并获取输入的食材
+        ingredient_from_image = image_modal.render_modal()
+
         with st.form("recipe_form", clear_on_submit=False):
+            # 食材输入框 - 使用session state来保持图像识别的结果
+            if 'ingredient_input' not in st.session_state:
+                st.session_state.ingredient_input = ""
+            
             ingredients = st.text_area(
                 t('ingredients'),
+                value=st.session_state.ingredient_input,
                 placeholder=t('ingredients_placeholder'),
                 height=100,
-                help=t('ingredients_help')
+                help=t('ingredients_help'),
+                key="ingredients_textarea"
             )
+
+            # 更新session state
+            st.session_state.ingredient_input = ingredients
 
             diet_options = {
                 t('no_preference'): "",

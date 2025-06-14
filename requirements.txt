@@ -1,11 +1,7 @@
 streamlit==1.28.1
 pymongo==4.5.0
 openai==1.86.0
-python-dotenv==1.0.0
 requests==2.31.0
-pyttsx3==2.90
-markdown==3.5.2
-beautifulsoup4==4.12.3
 #pip install -r requirements.txt
 #pip install --upgrade -r requirements.txt
 #pip install streamlit pymongo openai python-dotenv requests pyttsx3 markdown beautifulsoup4

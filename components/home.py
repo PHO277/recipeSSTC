@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st # type: ignore
 from utils.translations import get_translation
 
 def render_home():

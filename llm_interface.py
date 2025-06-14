@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import OpenAI # type: ignore
 import json
 import re
 
@@ -81,13 +81,19 @@ class LLMInterface:
                 stream=False
             )
             raw_content = response.choices[0].message.content
-            # Extract JSON content from ```json ... ``` block
+            # 尝试从 ```json ... ``` 块中提取 JSON 内容
             json_match = re.search(r'```json\n(.*?)\n```', raw_content, re.DOTALL)
-            if not json_match:
-                print(f"Invalid JSON block: {raw_content}")
-                raise Exception("API response does not contain valid JSON block")
-            json_content = json_match.group(1)
-            return json.loads(json_content)
+            if json_match:
+                json_content = json_match.group(1)
+            else:
+                # 如果没有找到 ```json``` 块，假设 raw_content 本身是 JSON
+                json_content = raw_content.strip()
+            
+            try:
+                return json.loads(json_content)
+            except json.JSONDecodeError:
+                print(f"Invalid JSON format: {raw_content}")
+                raise Exception("API response is not valid JSON")
         except Exception as e:
             print(f"API error: {str(e)}")
             raise Exception(f"API call failed: {str(e)}")
