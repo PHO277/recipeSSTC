@@ -4,4 +4,3 @@ openai==1.86.0
 requests==2.31.0
 #pip install -r requirements.txt
 #pip install --upgrade -r requirements.txt
-#pip install streamlit pymongo openai python-dotenv requests pyttsx3 markdown beautifulsoup4
