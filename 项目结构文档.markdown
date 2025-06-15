@@ -1,15 +1,16 @@
-# 🍳 智能食谱生成器项目结构文档
+# 智能食谱生成器项目结构文档
 
-## 📋 项目概述
+## 项目概述
 
 本项目包含两个版本：
 
 - **Streamlit版本**：原始开发版本，功能完整，适合快速开发和测试
 - **Flask版本**：新增生产版本，专为团队部署和桌面应用优化
 
-## 📁 目录结构
+## 目录结构
 
-### 🔹 Streamlit版本 (原始版本)
+### Streamlit版本 (原始版本)
+、、、
 recipe_generator/
 ├── app.py                    # 主应用入口，协调页面渲染
 ├── config/
@@ -30,7 +31,9 @@ recipe_generator/
 ├── mongodb_manager.py       # MongoDB数据库管理，处理用户和食谱数据
 ├── nutrition_analyzer.py    # 解析和格式化营养信息
 └── llm_interface.py        # 调用语言模型生成食谱和营养信息
-### 🔹 Flask版本 (新增生产版本)
+、、、
+### Flask版本 (新增生产版本)
+、、、
 flask_version/
 ├── integrated_app.py        # Flask完全集成版本 - 包含所有原有功能
 ├── flask_app.py            # Flask基础版本 - 简化功能演示
@@ -51,8 +54,8 @@ flask_version/
 ├── mongodb_manager.py     # 复制自原版本(运行copy_modules.py后生成)
 ├── llm_interface.py       # 复制自原版本(运行copy_modules.py后生成)
 └── nutrition_analyzer.py  # 复制自原版本(运行copy_modules.py后生成)
-
-## 📝 文件功能描述
+、、、
+## 文件功能描述
 
 ### Streamlit版本 (原有文件)
 
