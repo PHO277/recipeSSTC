@@ -7,8 +7,16 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
 # 将来可以导入你原来的组件
-# from components.generate_recipe import generate_recipe_logic
-# from components.auth import authenticate_user
+from mongodb_manager import MongoDBManager
+from llm_interface import LLMInterface
+from nutrition_analyzer import NutritionAnalyzer
+from components.image_input_modal import ImageInputModal
+
+# 初始化你的服务
+db_manager = MongoDBManager("mongodb://localhost:27017/recipe_app")
+llm_interface = LLMInterface(api_key="your-deepseek-api-key")
+nutrition_analyzer = NutritionAnalyzer()
+image_modal = ImageInputModal()
 
 app = Flask(__name__)
 app.secret_key = 'recipe-app-secret-key-2025'
