@@ -22,3 +22,6 @@ uvicorn==0.29.0
 fastapi==0.110.2
 pydantic==2.11.7
 typing-extensions==4.14.0
+python-dotenv==1.0.1
+flask-cors==4.0.0
+werkzeug==3.0.3
