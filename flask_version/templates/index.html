@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe App - Flask Version</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- 侧边栏 -->
+        <div id="sidebar">
+            <div class="logo">
+                <i class="fas fa-utensils"></i>
+                <h2>Recipe App</h2>
+            </div>
+            
+            <!-- 用户认证区域 -->
+            <div id="auth-section">
+                <div id="login-form" class="auth-form">
+                    <h3>Login</h3>
+                    <input type="text" id="username" placeholder="Username" required>
+                    <input type="password" id="password" placeholder="Password" required>
+                    <button onclick="login()" class="btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <div id="login-message" class="message"></div>
+                </div>
+                
+                <div id="user-info" style="display: none;">
+                    <div class="user-profile">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="user-name">User</span>
+                    </div>
+                    <button onclick="logout()" class="btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- 导航菜单 -->
+            <nav id="nav-menu" style="display: none;">
+                <ul>
+                    <li><a href="#" onclick="showTab('generate')" class="nav-link active">
+                        <i class="fas fa-magic"></i> Generate Recipe
+                    </a></li>
+                    <li><a href="#" onclick="showTab('my-recipes')" class="nav-link">
+                        <i class="fas fa-book"></i> My Recipes
+                    </a></li>
+                    <li><a href="#" onclick="showTab('discover')" class="nav-link">
+                        <i class="fas fa-compass"></i> Discover
+                    </a></li>
+                    <li><a href="#" onclick="showTab('statistics')" class="nav-link">
+                        <i class="fas fa-chart-bar"></i> Statistics
+                    </a></li>
+                    <li><a href="#" onclick="showTab('settings')" class="nav-link">
+                        <i class="fas fa-cog"></i> Settings
+                    </a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div id="main-content">
+            <!-- 欢迎页面 -->
+            <div id="home-page" class="page">
+                <div class="welcome-container">
+                    <h1><i class="fas fa-utensils"></i> Welcome to Recipe App</h1>
+                    <p class="subtitle">Your AI-powered cooking companion</p>
+                    
+                    <div class="features">
+                        <div class="feature-card">
+                            <i class="fas fa-robot"></i>
+                            <h3>AI Recipe Generation</h3>
+                            <p>Create amazing recipes with artificial intelligence</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-camera"></i>
+                            <h3>Image Recognition</h3>
+                            <p>Identify ingredients from photos</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-chart-pie"></i>
+                            <h3>Nutrition Analysis</h3>
+                            <p>Track nutritional information</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <h3>Restaurant Finder</h3>
+                            <p>Discover nearby restaurants</p>
+                        </div>
+                    </div>
+                    
+                    <div class="login-prompt">
+                        <p>Please login to access all features</p>
+                        <i class="fas fa-arrow-left"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 应用主界面 -->
+            <div id="app-interface" style="display: none;">
+                <!-- 生成食谱页面 -->
+                <div id="generate-tab" class="tab-pane active">
+                    <div class="page-header">
+                        <h2><i class="fas fa-magic"></i> Generate Recipe</h2>
+                        <p>Describe what you want to cook, and AI will create a recipe for you</p>
+                    </div>
+                    
+                    <div class="recipe-generator">
+                        <div class="input-section">
+                            <label for="recipe-input">What would you like to cook?</label>
+                            <textarea id="recipe-input" placeholder="e.g., 'Pasta with tomatoes and basil' or 'Healthy breakfast with eggs'..." rows="4"></textarea>
+                            
+                            <div class="generator-options">
+                                <select id="cuisine-type">
+                                    <option value="">Any Cuisine</option>
+                                    <option value="italian">Italian</option>
+                                    <option value="chinese">Chinese</option>
+                                    <option value="mexican">Mexican</option>
+                                    <option value="indian">Indian</option>
+                                    <option value="french">French</option>
+                                </select>
+                                
+                                <select id="difficulty">
+                                    <option value="">Any Difficulty</option>
+                                    <option value="easy">Easy</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                                
+                                <select id="prep-time">
+                                    <option value="">Any Time</option>
+                                    <option value="15">15 minutes</option>
+                                    <option value="30">30 minutes</option>
+                                    <option value="60">1 hour</option>
+                                    <option value="120">2+ hours</option>
+                                </select>
+                            </div>
+                            
+                            <button onclick="generateRecipe()" class="btn-generate" id="generate-btn">
+                                <i class="fas fa-magic"></i> Generate Recipe
+                            </button>
+                        </div>
+                        
+                        <div class="result-section">
+                            <div id="loading" style="display: none;">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>AI is creating your recipe...</p>
+                            </div>
+                            <div id="recipe-result"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 我的食谱页面 -->
+                <div id="my-recipes-tab" class="tab-pane">
+                    <div class="page-header">
+                        <h2><i class="fas fa-book"></i> My Recipes</h2>
+                        <p>Your saved recipes and cooking history</p>
+                    </div>
+                    <div id="my-recipes-list" class="recipes-grid">
+                        <div class="no-content">
+                            <i class="fas fa-book-open"></i>
+                            <p>No recipes saved yet. Generate some recipes to get started!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 发现页面 -->
+                <div id="discover-tab" class="tab-pane">
+                    <div class="page-header">
+                        <h2><i class="fas fa-compass"></i> Discover</h2>
+                        <p>Explore trending recipes and cooking inspiration</p>
+                    </div>
+                    <div id="discover-content" class="discover-grid">
+                        <div class="no-content">
+                            <i class="fas fa-compass"></i>
+                            <p>Discover feature coming soon...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 统计页面 -->
+                <div id="statistics-tab" class="tab-pane">
+                    <div class="page-header">
+                        <h2><i class="fas fa-chart-bar"></i> Statistics</h2>
+                        <p>Your cooking analytics and insights</p>
+                    </div>
+                    <div id="statistics-content">
+                        <div class="no-content">
+                            <i class="fas fa-chart-bar"></i>
+                            <p>Statistics will appear here once you start cooking!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设置页面 -->
+                <div id="settings-tab" class="tab-pane">
+                    <div class="page-header">
+                        <h2><i class="fas fa-cog"></i> Settings</h2>
+                        <p>Customize your recipe app experience</p>
+                    </div>
+                    <div id="settings-content">
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>Language</label>
+                                <select id="language-select">
+                                    <option value="en">English</option>
+                                    <option value="zh">中文</option>
+                                    <option value="es">Español</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>Theme</label>
+                                <select id="theme-select">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer id="footer">
+        <p>&copy; 2025 Recipe App - Flask Version | Team Internal Build</p>
+        <div class="status-indicator">
+            <span id="connection-status" class="status-connected">Connected</span>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
