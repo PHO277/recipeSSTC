@@ -30,7 +30,6 @@ recipe_generator/
 ├── mongodb_manager.py       # MongoDB数据库管理，处理用户和食谱数据
 ├── nutrition_analyzer.py    # 解析和格式化营养信息
 └── llm_interface.py        # 调用语言模型生成食谱和营养信息
-
 ### 🔹 Flask版本 (新增生产版本)
 flask_version/
 ├── integrated_app.py        # Flask完全集成版本 - 包含所有原有功能
