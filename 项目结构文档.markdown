@@ -1,7 +1,11 @@
 # 智能食谱生成器项目结构文档
+项目概述
+本项目包含两个版本：
 
+Streamlit版本：原始开发版本，功能完整，适合快速开发和测试
+Flask版本：新增生产版本，专为团队部署和桌面应用优化
 ## 目录结构
-```
+Streamlit版本 (原始版本)
 recipe_generator/
 ├── app.py                    # 主应用入口，协调页面渲染
 ├── config/
@@ -23,9 +27,29 @@ recipe_generator/
 ├── nutrition_analyzer.py    # 解析和格式化营养信息
 ├── llm_interface.py        # 调用语言模型生成食谱和营养信息
 ```
-
+Flask版本 (新增生产版本)
+flask_version/
+├── integrated_app.py        # Flask完全集成版本 - 包含所有原有功能
+├── flask_app.py            # Flask基础版本 - 简化功能演示
+├── copy_modules.py         # 自动复制原有模块的工具脚本
+├── quick_start.py          # 一键启动脚本，自动配置和启动应用
+├── run.py                  # 带横幅信息的启动脚本
+├── requirements.txt        # Flask版本专用Python依赖
+├── .env.example           # 环境变量配置示例文件
+├── README.md              # Flask版本使用说明文档
+├── templates/
+│   └── index.html         # 前端HTML模板，包含完整界面布局
+├── static/
+│   ├── style.css          # CSS样式文件，现代化响应式设计
+│   └── app.js             # JavaScript功能文件，前端交互逻辑
+├── components/            # 复制自原版本(运行copy_modules.py后生成)
+├── config/                # 复制自原版本(运行copy_modules.py后生成)
+├── utils/                 # 复制自原版本(运行copy_modules.py后生成)
+├── mongodb_manager.py     # 复制自原版本(运行copy_modules.py后生成)
+├── llm_interface.py       # 复制自原版本(运行copy_modules.py后生成)
+└── nutrition_analyzer.py  # 复制自原版本(运行copy_modules.py后生成)
 ## 文件功能描述
-
+Streamlit版本 (原有文件)
 ### 1. app.py
 **功能描述**：
 - 项目的主入口，负责协调整个应用的渲染流程。
@@ -131,3 +155,120 @@ recipe_generator/
 - `encode_image_to_base64(uploaded_file)`: 将上传的图片文件转为base64字符串，便于API传输。
 - `call_siliconflow_api(images, language)`: 调用API识别图片食材，自动处理异常和JSON解析。
 - `render_modal()`: 渲染图像输入模态窗口，包含图片上传、识别、结果选择与添加等完整交互流程。
+
+
+Flask版本 (新增文件)
+16. flask_version/integrated_app.py
+功能描述：
+
+Flask版本的完全集成应用，包含所有Streamlit版本的功能。
+自动导入和集成原有的所有模块（mongodb_manager、llm_interface、nutrition_analyzer等）。
+提供完整的RESTful API接口，支持用户认证、食谱生成、图像识别、数据统计等功能。
+包含降级处理机制，当某些服务不可用时提供备用功能。
+主要接口功能：
+initialize_services(): 初始化所有服务（数据库、AI、营养分析、图像识别）。
+/api/login (POST): 用户登录接口，集成原有数据库验证。
+/api/generate-recipe (POST): 食谱生成接口，使用原有LLM和营养分析功能。
+/api/image-recognition (POST): 图像识别接口，集成原有SiliconFlow API。
+/api/my-recipes (GET): 获取用户食谱列表。
+/api/statistics (GET): 获取用户统计数据。
+
+17. flask_version/flask_app.py
+功能描述：
+
+Flask版本的基础应用，提供简化的演示功能。
+用于快速测试和开发，不依赖外部服务。
+包含基本的用户认证和食谱生成模拟功能。
+主要接口功能：
+/api/test (GET): API测试端点。
+/api/login (POST): 简化的登录验证。
+/api/generate-recipe (POST): 模拟食谱生成。
+
+18. flask_version/copy_modules.py
+功能描述：
+
+自动化工具脚本，用于复制Streamlit版本的核心模块到Flask目录。
+检查并复制必要的Python文件和目录。
+提供复制状态反馈和错误处理。
+主要接口功能：
+copy_modules(): 执行模块复制操作，包括文件和目录的复制。
+
+19. flask_version/quick_start.py
+功能描述：
+
+一键启动脚本，自动完成环境配置、依赖安装、模块复制和应用启动的完整流程。
+包含Python版本检查、依赖安装、环境变量设置等功能。
+提供友好的用户界面和详细的状态信息。
+主要接口功能：
+check_python_version(): 检查Python版本兼容性。
+install_dependencies(): 自动安装所需依赖包。
+setup_environment(): 创建和配置环境变量文件。
+start_application(): 启动Flask应用并自动打开浏览器。
+
+20. flask_version/run.py
+功能描述：
+
+带有详细信息显示的启动脚本，包含项目横幅、依赖检查和服务状态显示。
+提供启动信息、功能列表和开发指南。
+支持自动打开浏览器和优雅的错误处理。
+主要接口功能：
+print_banner(): 显示应用启动横幅。
+check_dependencies(): 检查和显示依赖模块状态。
+open_browser(): 延迟自动打开浏览器。
+
+21. flask_version/templates/index.html
+功能描述：
+
+Flask应用的主要前端模板，包含完整的用户界面布局。
+实现响应式设计，支持桌面和移动端显示。
+包含用户认证界面、导航菜单、主要功能页面（食谱生成、我的食谱、发现、统计、设置）。
+集成Font Awesome图标和现代化CSS样式。
+主要组件：
+侧边栏：用户认证、导航菜单
+主内容区：功能页面和交互界面
+页脚：状态信息和版权信息
+
+22. flask_version/static/style.css
+功能描述：
+
+现代化的CSS样式文件，提供完整的视觉设计。
+实现响应式布局，支持多种屏幕尺寸。
+包含深色/浅色主题支持、动画效果、交互反馈。
+定义了完整的颜色系统、字体层级和布局规则。
+主要特性：
+CSS变量系统便于主题定制
+响应式网格布局
+动画和过渡效果
+现代化的表单和按钮样式
+
+23. flask_version/static/app.js
+功能描述：
+
+前端JavaScript功能文件，处理所有用户交互逻辑。
+实现单页应用(SPA)风格的标签页切换和内容加载。
+包含AJAX请求处理、本地存储管理、实时状态更新。
+提供完整的食谱生成、用户管理、数据统计等前端功能。
+主要接口功能：
+login(): 处理用户登录请求和状态更新。
+generateRecipe(): 发送食谱生成请求并处理响应。
+showTab(): 实现标签页切换和内容加载。
+loadMyRecipes(): 加载和显示用户食谱列表。
+saveCurrentRecipe(): 保存食谱到本地存储。
+
+24. flask_version/.env.example
+功能描述：
+
+环境变量配置示例文件，提供所有必要配置项的模板。
+包含数据库连接、API密钥、Flask配置等设置。
+便于用户快速配置开发和生产环境。
+配置项：
+MongoDB连接字符串
+DeepSeek和SiliconFlow API密钥
+Flask应用密钥和环境设置
+
+25. flask_version/README.md
+功能描述：
+
+Flask版本的专用说明文档，包含详细的使用指南。
+提供快速开始、功能介绍、配置说明、部署指南等信息。
+包含与Streamlit版本的对比说明和技术架构介绍。
