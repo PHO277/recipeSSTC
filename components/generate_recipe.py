@@ -1,17 +1,20 @@
 import streamlit as st # type: ignore
 import os
-from datetime import datetime
 import random
 from llm_interface import LLMInterface
-from nutrition_analyzer import NutritionAnalyzer
 from utils.translations import get_translation
 from components.image_input_modal import ImageInputModal
+from components.recipe_display import RecipeDisplay
+import json
 
 def render_generate_recipe():
     t = lambda key: get_translation(key, st.session_state.language)
 
     # 初始化图像输入模态窗口
     image_modal = ImageInputModal()
+
+    # 初始化食谱显示组件
+    recipe_display = RecipeDisplay()
 
     col1, col2 = st.columns([2, 3])
 
@@ -115,6 +118,7 @@ def render_generate_recipe():
                 )
 
     with col2:
+
         if generate_btn and ingredients:
             with st.spinner(t('generating_recipe')):
                 try:
@@ -124,176 +128,82 @@ def render_generate_recipe():
                         st.stop()
 
                     llm = LLMInterface(api_key=api_key)
-                    nutrition = NutritionAnalyzer()
 
                     actual_diet = diet_options[diet]
                     actual_goal = goal_options[goal]
 
-                    llm_output = llm.generate_recipe_and_nutrition(
-                        ingredients,
-                        actual_diet,
-                        actual_goal,
-                        language=st.session_state.language,
-                        cuisine=cuisine if 'cuisine' in locals() else None,
-                        cooking_time=cooking_time if 'cooking_time' in locals() else None,
-                        difficulty=difficulty if 'difficulty' in locals() else None,
-                        servings=servings if 'servings' in locals() else 2
-                    )
+                    use_simulated_output=False # 改为 True 可以使用模拟输出,方便测试
+
+                    llm_output = None
+
+                    if not use_simulated_output:
+                        llm_output = llm.generate_recipe_and_nutrition(
+                            ingredients,
+                            actual_diet,
+                            actual_goal,
+                            language=st.session_state.language,
+                            cuisine=cuisine if 'cuisine' in locals() else None,
+                            cooking_time=cooking_time if 'cooking_time' in locals() else None,
+                            difficulty=difficulty if 'difficulty' in locals() else None,
+                            servings=servings if 'servings' in locals() else 2
+                        )
+
+                    #simulate LLM output for testing
+                    else:
+                        llm_output_str= """{
+                            "title": "Mediterranean Garlic Herb Chicken with Roasted Broccoli",
+                            "description": "A high-protein Mediterranean dish perfect for muscle gain, featuring juicy herb-marinated chicken with garlic roasted broccoli.",
+                            "ingredients": [
+                                "2 large chicken breasts (6 oz each)",
+                                "2 cups fresh broccoli florets",
+                                "3 cloves garlic, minced",
+                                "1 tbsp olive oil",
+                                "1 tsp dried oregano",
+                                "1/2 tsp sea salt",
+                                "1/4 tsp black pepper",
+                                "1/4 tsp paprika",
+                                "1 tbsp lemon juice"
+                            ],
+                            "instructions": [
+                                "Preheat oven to 400°F (200°C) and line a baking sheet with parchment paper.",
+                                "In a small bowl, mix olive oil, minced garlic, oregano, salt, pepper, paprika, and lemon juice to create a marinade.",
+                                "Coat chicken breasts evenly with the marinade and let sit for 10 minutes while preparing broccoli.",
+                                "Toss broccoli florets with remaining marinade and spread on one side of the baking sheet.",
+                                "Place chicken breasts on the other side of the baking sheet and roast for 20-25 minutes until chicken reaches 165°F internal temperature.",
+                                "Let chicken rest for 5 minutes before slicing to retain juices."
+                            ],
+                            "nutrition": {
+                                "Calories": "320 kcal",
+                                "Protein": "42 g",
+                                "Carbohydrates": "12 g",
+                                "Fat": "11 g",
+                                "Fiber": "4 g",
+                                "Sugar": "3 g",
+                                "Sodium": "480 mg",
+                                "Vitamin A": "1200 IU",
+                                "Calcium": "90 mg",
+                                "Iron": "2.5 mg"
+                            },
+                            "serves": 2,
+                            "prep_time": "15 min",
+                            "cook_time": "25 min",
+                            "difficulty": "Easy"
+                        }"""
+
+                        llm_output= json.loads(llm_output_str.strip())
+
+                    st.session_state.recipe_data= llm_output
 
                     st.success(t('recipe_generated'))
 
-                    # Display recipe title
-                    st.markdown(f"<h2 style='font-size: 1.8em;'>{llm_output['title']}</h2>", unsafe_allow_html=True)
-
-                    # Display recipe description
-                    st.markdown(f"### ℹ️ {t('recipe_description')}")
-                    st.markdown(llm_output['description'])
-
-                    # Display ingredients
-                    st.markdown(f"### 🥕 {t('ingredients')}")
-                    for ingredient in llm_output['ingredients']:
-                        st.markdown(f"- {ingredient}")
-
-                    # Display instructions
-                    st.markdown(f"### 🍳 {t('instructions')}")
-                    for i, step in enumerate(llm_output['instructions'], 1):
-                        st.markdown(f"{i}. {step}")
-                        
-                    # Display nutrition facts
-                    st.markdown(f"### 🥗 {t('nutrition_facts')}")
-                    nutrition_info = nutrition.parse_nutrition(llm_output)
-                    nutrition_dict = {}
-                    for line in nutrition_info.split('\n'):
-                        if ':' in line:
-                            key, value = line.split(':', 1)
-                            # Normalize the key by removing spaces and leading/trailing characters
-                            cleaned_key = key.strip().strip('-').replace(' ', '')
-                            nutrition_dict[cleaned_key] = value.strip()
-
-                    print(nutrition_dict)  # Debugging line to check nutrition_dict content
-
-                    nutrition_items = [
-                        ("🔥", t('calories'), nutrition_dict.get("Calories", "N/A")),
-                        ("🥩", t('protein'), nutrition_dict.get("Protein", "N/A")),
-                        ("🥑", t('fat'), nutrition_dict.get("Fat", "N/A")),
-                        ("🌾", t('carbs'), nutrition_dict.get("Carbohydrates", "N/A")),
-                        ("🌱", t('fiber'), nutrition_dict.get("Fiber", "N/A")),
-                        ("🍬", t('sugar'), nutrition_dict.get("Sugar", "N/A")),
-                        ("🧂", t('sodium'), nutrition_dict.get("Sodium", "N/A")),
-                        ("🧬", t('vitamin_a'), nutrition_dict.get("VitaminA", "N/A")),  # Normalized key
-                        ("🦴", t('calcium'), nutrition_dict.get("Calcium", "N/A")),
-                        ("🩺", t('iron'), nutrition_dict.get("Iron", "N/A"))
-                    ]
-
-                    for icon, label, value in nutrition_items:
-                        nutrition_html = f'''
-                        <div class="nutrition-item" style="background-color: #e6f3ff; padding: 10px; margin: 5px; border-radius: 5px; display: inline-block;">
-                            <span style="font-size: 1.5em;">{icon}</span>
-                            <strong>{label}:</strong> {value}
-                        </div>
-                        '''
-                        st.markdown(nutrition_html, unsafe_allow_html=True)
-
-                    # Display additional recipe information
-                    st.markdown(f"**{t('serves')}**: {llm_output['serves']}")
-                    st.markdown(f"**{t('prep_time')}**: {llm_output['prep_time']}")
-                    st.markdown(f"**{t('cook_time')}**: {llm_output['cook_time']}")
-                    st.markdown(f"**{t('difficulty')}**: {llm_output['difficulty']}")
-
-                    st.markdown("---")
-                    st.markdown(f"### 💾 {t('save_options')}")
-
-                    col_save1, col_save2 = st.columns(2)
-
-                    with col_save1:
-                        rating = st.slider(t('rate_recipe'), 0, 5, 3, help=t('rate_help'))
-                        tags_input = st.text_input(
-                            t('add_tags'),
-                            placeholder=t('tags_placeholder'),
-                            help=t('tags_help')
-                        )
-
-                    with col_save2:
-                        notes = st.text_area(
-                            t('notes'),
-                            placeholder=t('notes_placeholder'),
-                            height=100
-                        )
-
-                    col_action1, col_action2, col_action3 = st.columns(3)
-
-                    with col_action1:
-                        if st.button(t('save_recipe'), type="primary", use_container_width=True):
-                            recipe_data = {
-                                "title": llm_output['title'],
-                                "description": llm_output['description'],
-                                "ingredients": llm_output['ingredients'],
-                                "instructions": llm_output['instructions'],
-                                "nutrition": nutrition_info,
-                                "serves": llm_output['serves'],
-                                "prep_time": llm_output['prep_time'],
-                                "cook_time": llm_output['cook_time'],
-                                "difficulty": llm_output['difficulty'],
-                                "rating": rating,
-                                "tags": [tag.strip() for tag in tags_input.split(',') if tag.strip()],
-                                "notes": notes,
-                                "cuisine": cuisine if 'cuisine' in locals() else "",
-                                "diet": diet,
-                                "goal": goal
-                            }
-
-                            recipe_id = st.session_state.db.save_recipe(st.session_state.username, recipe_data)
-                            st.success(t('recipe_saved'))
-                            st.balloons()
-
-                    with col_action2:
-                        recipe_text = f"""
-                            {t('recipe')}
-                            {'=' * 50}
-
-                            {t('recipe_title')}: {llm_output['title']}
-
-                            {t('recipe_description')}
-                            {'-' * 50}
-                            {llm_output['description']}
-
-                            {t('ingredients')}
-                            {'-' * 50}
-                            {chr(10).join(f'- {ingredient}' for ingredient in llm_output['ingredients'])}
-
-                            {t('instructions')}
-                            {'-' * 50}
-                            {chr(10).join(f'{i}. {step}' for i, step in enumerate(llm_output['instructions'], 1))}
-
-                            {t('nutrition_facts')}
-                            {'-' * 50}
-                            {nutrition_info}
-
-                            ---
-                            {t('serves')}: {llm_output['serves']}
-                            {t('prep_time')}: {llm_output['prep_time']}
-                            {t('cook_time')}: {llm_output['cook_time']}
-                            {t('difficulty')}: {llm_output['difficulty']}
-                            {t('generated_on')}: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-                            {t('ingredients')}: {ingredients}
-                            {t('diet_preference')}: {diet}
-                            {t('health_goal')}: {goal}
-"""
-                        st.download_button(
-                            label=t('download_recipe'),
-                            data=recipe_text.encode('utf-8'),
-                            file_name=f"recipe_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                            mime="text/plain",
-                            use_container_width=True
-                        )
-
-                    with col_action3:
-                        if st.button(t('share_recipe'), use_container_width=True):
-                            st.info(t('share_coming_soon'))
+                    recipe_display.display_full_recipe(llm_output, show_save_options=True)
 
                 except Exception as e:
                     st.error(f"{t('generation_error')}: {str(e)}")
                     st.info(t('try_again_later'))
+        elif st.session_state.recipe_data:
+            # 如果已经有食谱数据，直接显示
+            recipe_display.display_full_recipe(st.session_state.recipe_data, show_save_options=True)
 
         if lucky_btn:
             random_ingredients = random.choice([
@@ -306,6 +216,10 @@ def render_generate_recipe():
 
             st.info(f"{t('lucky_ingredients')}: {random_ingredients}")
             st.info(t('click_generate_with_these'))
+            st.session_state.ingredient_input = random_ingredients
+            st.rerun()
+            
+
 
         if generate_btn and not ingredients:
             st.warning(t('please_enter_ingredients'))

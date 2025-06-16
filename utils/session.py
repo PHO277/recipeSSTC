@@ -26,3 +26,5 @@ def initialize_session():
         st.session_state.language = 'zh'
     if 'active_tab' not in st.session_state:
         st.session_state.active_tab = "generate"
+    if 'recipe_data' not in st.session_state:
+        st.session_state.recipe_data = None

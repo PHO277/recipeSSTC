@@ -77,15 +77,25 @@ class MongoDBManager:
         """保存食谱"""
         recipe_doc = {
             "username": username,
-            "ingredients": recipe_data.get("ingredients"),
-            "diet": recipe_data.get("diet"),
-            "goal": recipe_data.get("goal"),
-            "recipe_text": recipe_data.get("recipe"),
-            "nutrition_info": recipe_data.get("nutrition"),
+            "title": recipe_data.get("title", ""),
+            "description": recipe_data.get("description", ""),
+            "ingredients": recipe_data.get("ingredients", []),
+            "instructions": recipe_data.get("instructions", []),
+            "nutrition_info": recipe_data.get("nutrition", ""),
+            "serves": recipe_data.get("serves", ""),
+            "prep_time": recipe_data.get("prep_time", ""),
+            "cook_time": recipe_data.get("cook_time", ""),
+            "difficulty": recipe_data.get("difficulty", ""),
+            "cuisine": recipe_data.get("cuisine", ""),
+            "diet": recipe_data.get("diet", ""),
+            "goal": recipe_data.get("goal", ""),
             "created": datetime.utcnow(),
             "rating": recipe_data.get("rating", 0),
             "tags": recipe_data.get("tags", []),
-            "notes": recipe_data.get("notes", "")
+            "notes": recipe_data.get("notes", ""),
+            # 保持向后兼容性
+            "recipe_text": recipe_data.get("recipe_text", ""),
+            "nutrition": recipe_data.get("nutrition", "")
         }
 
         result = self.recipes_collection.insert_one(recipe_doc)

@@ -25,7 +25,8 @@ recipe_generator/
 │   ├── statistics.py       # 用户食谱统计页面
 │   ├── settings.py         # 用户设置页面
 │   ├── footer.py           # 页脚组件
-│   └── image_input_modal.py # 图像输入模态窗口组件
+│   ├── image_input_modal.py # 图像输入模态窗口组件
+│   └── recipe_display.py    # 食谱展示与交互组件
 ├── utils/
 │   └── session.py          # 会话状态初始化和项目路径配置
 ├── mongodb_manager.py       # MongoDB数据库管理，处理用户和食谱数据
@@ -165,9 +166,29 @@ flask_version/
 - `call_siliconflow_api(images, language)`: 调用API识别图片食材，自动处理异常和JSON解析。
 - `render_modal()`: 渲染图像输入模态窗口，包含图片上传、识别、结果选择与添加等完整交互流程。
 
+#### 16. components/recipe_display.py
+**功能描述**：
+- 封装了所有食谱展示相关的UI逻辑，支持卡片式、完整详情、保存、下载等多种展示方式。
+- 提供食谱卡片、完整食谱、营养信息、标签、操作按钮、保存表单、下载按钮等复用组件。
+- 统一处理食谱的元数据、内容、营养信息、用户备注、标签、评分等展示与交互。
+- 供 `generate_recipe.py` 和 `my_recipes.py` 等页面直接调用，简化主页面逻辑。
+
+**主要接口功能**：
+- `RecipeDisplay.__init__()`: 初始化多语言翻译函数。
+- `display_recipe_card(recipe_data, show_actions, key_prefix)`: 显示我的食谱页面的卡片式食谱。
+- `display_full_recipe(recipe_data, show_save_options)`: 显示生成食谱页面的完整食谱详情。
+- `_display_recipe_metadata(recipe_data)`: 展示食谱标签、基础信息。
+- `_display_recipe_content(recipe_data)`: 展示食材、备注、步骤、营养信息等内容。
+- `_display_recipe_actions(recipe_data, key_prefix)`: 展示删除、分享等操作按钮。
+- `_display_nutrition_info(recipe_data)`: 解析并卡片式展示营养信息。
+- `_display_recipe_details(recipe_data)`: 展示详细信息如份量、时长、难度。
+- `_display_save_options(recipe_data)`: 提供保存、评分、标签、备注、下载等表单与按钮。
+- `_display_download_button(recipe_data)`: 生成下载按钮，导出食谱为txt。
+- `_format_recipe_for_download(recipe_data)`: 格式化食谱文本用于下载。
+
 ### Flask版本 (新增文件)
 
-#### 16. flask_version/integrated_app.py
+#### 17. flask_version/integrated_app.py
 **功能描述**：
 - Flask版本的完全集成应用，包含所有Streamlit版本的功能。
 - 自动导入和集成原有的所有模块（mongodb_manager、llm_interface、nutrition_analyzer等）。
@@ -182,7 +203,7 @@ flask_version/
 - `/api/my-recipes` (GET): 获取用户食谱列表。
 - `/api/statistics` (GET): 获取用户统计数据。
 
-#### 17. flask_version/flask_app.py
+#### 18. flask_version/flask_app.py
 **功能描述**：
 - Flask版本的基础应用，提供简化的演示功能。
 - 用于快速测试和开发，不依赖外部服务。
@@ -193,7 +214,7 @@ flask_version/
 - `/api/login` (POST): 简化的登录验证。
 - `/api/generate-recipe` (POST): 模拟食谱生成。
 
-#### 18. flask_version/copy_modules.py
+#### 19. flask_version/copy_modules.py
 **功能描述**：
 - 自动化工具脚本，用于复制Streamlit版本的核心模块到Flask目录。
 - 检查并复制必要的Python文件和目录。
@@ -202,7 +223,7 @@ flask_version/
 **主要接口功能**：
 - `copy_modules()`: 执行模块复制操作，包括文件和目录的复制。
 
-#### 19. flask_version/quick_start.py
+#### 20. flask_version/quick_start.py
 **功能描述**：
 - 一键启动脚本，自动完成环境配置、依赖安装、模块复制和应用启动的完整流程。
 - 包含Python版本检查、依赖安装、环境变量设置等功能。
@@ -214,7 +235,7 @@ flask_version/
 - `setup_environment()`: 创建和配置环境变量文件。
 - `start_application()`: 启动Flask应用并自动打开浏览器。
 
-#### 20. flask_version/run.py
+#### 21. flask_version/run.py
 **功能描述**：
 - 带有详细信息显示的启动脚本，包含项目横幅、依赖检查和服务状态显示。
 - 提供启动信息、功能列表和开发指南。
@@ -225,7 +246,7 @@ flask_version/
 - `check_dependencies()`: 检查和显示依赖模块状态。
 - `open_browser()`: 延迟自动打开浏览器。
 
-#### 21. flask_version/templates/index.html
+#### 22. flask_version/templates/index.html
 **功能描述**：
 - Flask应用的主要前端模板，包含完整的用户界面布局。
 - 实现响应式设计，支持桌面和移动端显示。
@@ -237,7 +258,7 @@ flask_version/
 - 主内容区：功能页面和交互界面
 - 页脚：状态信息和版权信息
 
-#### 22. flask_version/static/style.css
+#### 23. flask_version/static/style.css
 **功能描述**：
 - 现代化的CSS样式文件，提供完整的视觉设计。
 - 实现响应式布局，支持多种屏幕尺寸。
@@ -250,7 +271,7 @@ flask_version/
 - 动画和过渡效果
 - 现代化的表单和按钮样式
 
-#### 23. flask_version/static/app.js
+#### 24. flask_version/static/app.js
 **功能描述**：
 - 前端JavaScript功能文件，处理所有用户交互逻辑。
 - 实现单页应用(SPA)风格的标签页切换和内容加载。
@@ -264,7 +285,7 @@ flask_version/
 - `loadMyRecipes()`: 加载和显示用户食谱列表。
 - `saveCurrentRecipe()`: 保存食谱到本地存储。
 
-#### 24. flask_version/.env.example
+#### 25. flask_version/.env.example
 **功能描述**：
 - 环境变量配置示例文件，提供所有必要配置项的模板。
 - 包含数据库连接、API密钥、Flask配置等设置。
@@ -275,7 +296,7 @@ flask_version/
 - DeepSeek和SiliconFlow API密钥
 - Flask应用密钥和环境设置
 
-#### 25. flask_version/README.md
+#### 26. flask_version/README.md
 **功能描述**：
 - Flask版本的专用说明文档，包含详细的使用指南。
 - 提供快速开始、功能介绍、配置说明、部署指南等信息。
