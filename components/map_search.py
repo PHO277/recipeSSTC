@@ -520,42 +520,46 @@ class MapSearch:
         # 显示餐厅列表
         for idx, restaurant in enumerate(results[:10]):
             with st.container():
-                col1, col2, col3 = st.columns([3, 2, 1])
+                # 餐厅信息使用单独的容器
+                restaurant_container = st.container()
+                with restaurant_container:
+                    col1, col2, col3 = st.columns([3, 2, 1])
 
-                with col1:
-                    # 如果是 AI 推荐的，加个标记
-                    ai_badge = "🤖 " if restaurant.get('ai_recommended') else ""
-                    st.markdown(f"**{ai_badge}{idx + 1}. {restaurant['name']}**")
-                    st.caption(restaurant.get('address', '地址未知'))
+                    with col1:
+                        # 如果是 AI 推荐的，加个标记
+                        ai_badge = "🤖 " if restaurant.get('ai_recommended') else ""
+                        st.markdown(f"**{ai_badge}{idx + 1}. {restaurant['name']}**")
+                        st.caption(restaurant.get('address', '地址未知'))
 
-                with col2:
-                    rating = restaurant.get('rating', 0)
-                    st.markdown(f"⭐ {rating}")
-                    if 'avg_price' in restaurant:
-                        st.markdown(f"💰 人均 ¥{restaurant['avg_price']}")
+                    with col2:
+                        rating = restaurant.get('rating', 0)
+                        st.markdown(f"⭐ {rating}")
+                        if 'avg_price' in restaurant:
+                            st.markdown(f"💰 人均 ¥{restaurant['avg_price']}")
 
-                with col3:
-                    if 'distance' in restaurant:
-                        distance = restaurant['distance']
-                        if distance < 1000:
-                            st.markdown(f"📍 {distance}m")
-                        else:
-                            st.markdown(f"📍 {distance / 1000:.1f}km")
+                    with col3:
+                        if 'distance' in restaurant:
+                            distance = restaurant['distance']
+                            if distance < 1000:
+                                st.markdown(f"📍 {distance}m")
+                            else:
+                                st.markdown(f"📍 {distance / 1000:.1f}km")
 
-                    # 显示匹配分数（调试用，可以注释掉）
-                    # st.caption(f"匹配度: {restaurant['match_score']:.1f}")
-
-                # 操作按钮
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    if st.button(f"查看详情", key=f"detail_{idx}"):
-                        self._show_restaurant_detail(restaurant)
-                with col2:
-                    if st.button(f"导航", key=f"nav_{idx}"):
-                        self._navigate_to_restaurant(restaurant)
-                with col3:
-                    if st.button(f"收藏", key=f"fav_{idx}"):
-                        self._add_to_favorites(restaurant)
+                # 操作按钮使用独立的容器，避免嵌套
+                button_container = st.container()
+                with button_container:
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        if st.button(f"查看详情", key=f"detail_{idx}"):
+                            self._show_restaurant_detail(restaurant)
+                    with col2:
+                        if st.button(f"导航", key=f"nav_{idx}"):
+                            # 不要在这里直接调用会创建columns的方法
+                            st.session_state['navigate_to'] = restaurant
+                            st.rerun()
+                    with col3:
+                        if st.button(f"收藏", key=f"fav_{idx}"):
+                            self._add_to_favorites(restaurant)
 
                 st.divider()
 
@@ -742,30 +746,26 @@ class MapSearch:
         st.divider()
 
     def _navigate_to_restaurant(self, restaurant):
-        """导航到餐厅"""
+        """导航到餐厅 - 使用expander避免布局冲突"""
         if 'location' in restaurant:
             location = restaurant['location']
             restaurant_name = restaurant['name']
 
-            # 提供多种导航选项
-            st.markdown("**选择导航方式:**")
-            col1, col2, col3 = st.columns(3)
+            with st.expander("🚗 导航选项", expanded=True):
+                st.markdown("**选择导航方式:**")
 
-            with col1:
-                # 高德地图
+                # 准备导航链接
                 amap_url = f"https://uri.amap.com/navigation?to={location},{restaurant_name}&mode=car&policy=1&src=myapp&coordinate=gaode&callnative=0"
-                st.markdown(f"[📍 高德导航]({amap_url})")
 
-            with col2:
-                # 百度地图
                 lng, lat = location.split(',')
                 baidu_url = f"http://api.map.baidu.com/direction?destination=latlng:{lat},{lng}|name:{restaurant_name}&mode=driving&src=webapp.baidu.openAPIdemo"
-                st.markdown(f"[📍 百度导航]({baidu_url})")
 
-            with col3:
-                # 腾讯地图
                 tx_url = f"https://apis.map.qq.com/uri/v1/routeplan?type=drive&to={restaurant_name}&tocoord={lat},{lng}"
-                st.markdown(f"[📍 腾讯导航]({tx_url})")
+
+                # 使用列表形式展示
+                st.markdown(f"- [📍 高德导航]({amap_url})")
+                st.markdown(f"- [📍 百度导航]({baidu_url})")
+                st.markdown(f"- [📍 腾讯导航]({tx_url})")
 
     def _add_to_favorites(self, restaurant):
         """添加到收藏"""
