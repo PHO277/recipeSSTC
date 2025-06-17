@@ -734,34 +734,40 @@ class MapSearch:
             st.error(f"地址解析失败: {str(e)}")
             return None
 
-    def _show_restaurant_detail(self, restaurant):
-        """显示餐厅详情"""
-        st.session_state.selected_restaurant = restaurant
+   def _show_restaurant_detail(self, restaurant):
+    """显示餐厅详情"""
+    st.session_state.selected_restaurant = restaurant
+    
+    # 使用 dialog 装饰器创建模态框
+    @st.dialog(f"🍽️ {restaurant['name']} 详情")
+    def show_details():
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**基本信息**")
+            st.write(f"📍 地址: {restaurant.get('address', '未知')}")
+            st.write(f"📞 电话: {restaurant.get('tel', '未知')}")
+            st.write(f"⭐ 评分: {restaurant.get('rating', '暂无')}")
+            st.write(f"💰 人均: ¥{restaurant.get('avg_price', '未知')}")
 
-        # 创建详情弹窗
-        with st.expander(f"🍽️ {restaurant['name']} 详情", expanded=True):
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.markdown("**基本信息**")
-                st.write(f"📍 地址: {restaurant.get('address', '未知')}")
-                st.write(f"📞 电话: {restaurant.get('tel', '未知')}")
-                st.write(f"⭐ 评分: {restaurant.get('rating', '暂无')}")
-                st.write(f"💰 人均: ¥{restaurant.get('avg_price', '未知')}")
-
-            with col2:
-                st.markdown("**推荐信息**")
-                st.write(f"🍽️ 推荐菜品: {restaurant.get('suggested_for', '')}")
-                st.write(f"🏷️ 菜系匹配: {restaurant.get('cuisine_match', '')}")
-                if restaurant.get('ai_recommended'):
-                    st.write("🤖 AI推荐")
-                if 'distance' in restaurant:
-                    distance = restaurant['distance']
-                    if distance < 1000:
-                        st.write(f"📏 距离: {distance}m")
-                    else:
-                        st.write(f"📏 距离: {distance / 1000:.1f}km")
-
+        with col2:
+            st.markdown("**推荐信息**")
+            st.write(f"🍽️ 推荐菜品: {restaurant.get('suggested_for', '')}")
+            st.write(f"🏷️ 菜系匹配: {restaurant.get('cuisine_match', '')}")
+            if restaurant.get('ai_recommended'):
+                st.write("🤖 AI推荐")
+            if 'distance' in restaurant:
+                distance = restaurant['distance']
+                if distance < 1000:
+                    st.write(f"📏 距离: {distance}m")
+                else:
+                    st.write(f"📏 距离: {distance / 1000:.1f}km")
+        
+        if st.button("关闭", type="primary"):
+            st.rerun()
+    
+    # 调用显示详情
+    show_details()
     def _navigate_to_restaurant(self, restaurant):
         """导航到餐厅"""
         if 'location' in restaurant:
