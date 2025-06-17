@@ -93,9 +93,10 @@ class MapSearch:
                 step=0.5,
                 key="min_rating"
             )
+
+        # 确保search_radius存在
         if 'search_radius' not in st.session_state:
             st.session_state.search_radius = 3
-        # 获取search_radius的值（如果高级选项未展开，使用默认值）
         search_radius = st.session_state.get('search_radius', 3)
 
         # 搜索按钮
@@ -133,8 +134,6 @@ class MapSearch:
                 random_dishes = ["宫保鸡丁", "糖醋排骨", "鱼香肉丝", "麻辣香锅", "寿司", "拉面", "披萨", "汉堡"]
             
             random_dish = random.choice(random_dishes)
-
-            # 不要修改 session_state，而是直接显示和搜索
             st.info(f"🎲 {get_translation('random_recommend', lang)}: {random_dish}")
 
             with st.spinner(get_translation('searching_dish_restaurants', lang).format(random_dish)):
@@ -145,6 +144,35 @@ class MapSearch:
         # 显示搜索结果
         if "search_results" in st.session_state and st.session_state.search_results:
             self._display_search_results()
+
+    def _search_restaurants(self, dish_name, radius):
+        """执行餐厅搜索流程"""
+        try:
+            # 1. 使用AI分析菜品类型
+            cuisine_info = self._analyze_dish_cuisine(dish_name)
+
+            # 2. 构建搜索关键词
+            search_keywords = self._build_search_keywords(dish_name, cuisine_info)
+
+            # 3. 调用地图API搜索
+            results = []
+            for keyword in search_keywords[:3]:  # 最多使用3个关键词
+                restaurants = self._call_map_api(keyword, radius)
+                results.extend(restaurants)
+
+            # 4. 去重和排序
+            unique_results = self._deduplicate_results(results)
+            ranked_results = self._rank_results(unique_results, dish_name, cuisine_info)
+
+            # 5. 保存结果
+            st.session_state.search_results = ranked_results
+            st.session_state.search_dish = dish_name
+            st.session_state.cuisine_info = cuisine_info
+
+        except Exception as e:
+            st.error(f"搜索失败：{str(e)}")
+            # 设置空结果
+            st.session_state.search_results = []
 
     def _analyze_dish_cuisine(self, dish_name):
         """使用 DeepSeek 智能分析菜品"""
@@ -224,6 +252,269 @@ class MapSearch:
             st.warning(get_translation('ai_analysis_failed', lang).format(str(e)))
             return self._analyze_dish_cuisine_fallback(dish_name)
 
+    def _analyze_dish_cuisine_fallback(self, dish_name):
+        """备用的规则匹配方法"""
+        cuisine_rules = {
+            "中餐": ["炒", "煮", "蒸", "炖", "烧", "宫保", "鱼香", "麻婆", "糖醋", "红烧", "麻辣", "香锅"],
+            "日料": ["寿司", "刺身", "拉面", "天妇罗", "照烧", "味增", "日本", "日式"],
+            "韩餐": ["泡菜", "烤肉", "石锅", "冷面", "拌饭", "韩国", "韩式"],
+            "西餐": ["披萨", "意面", "汉堡", "牛排", "沙拉", "薯条", "西式", "意大利"],
+            "火锅": ["火锅", "串串", "麻辣烫", "冒菜"]
+        }
+
+        detected_cuisine = "中餐"  # 默认
+        restaurant_types = ["中餐厅", "中国餐厅"]
+
+        for cuisine, keywords in cuisine_rules.items():
+            if any(keyword in dish_name for keyword in keywords):
+                detected_cuisine = cuisine
+                if cuisine == "中餐":
+                    restaurant_types = ["中餐厅", "中国餐厅", "家常菜", "川菜", "粤菜"]
+                elif cuisine == "日料":
+                    restaurant_types = ["日本料理", "日料", "寿司店", "居酒屋"]
+                elif cuisine == "韩餐":
+                    restaurant_types = ["韩国料理", "韩餐", "烤肉店"]
+                elif cuisine == "西餐":
+                    restaurant_types = ["西餐厅", "牛排馆", "披萨店", "意大利餐厅"]
+                elif cuisine == "火锅":
+                    restaurant_types = ["火锅店", "火锅", "串串香"]
+                break
+
+        return {
+            "cuisine_type": detected_cuisine,
+            "restaurant_types": restaurant_types,
+            "search_keywords": restaurant_types,
+            "confidence": 0.85,
+            "analysis_method": "rule_based"
+        }
+
+    def _build_search_keywords(self, dish_name, cuisine_info):
+        """构建智能搜索关键词"""
+        keywords = []
+
+        # 如果是 AI 分析的结果，使用 AI 推荐的关键词
+        if cuisine_info.get('search_keywords'):
+            keywords.extend(cuisine_info['search_keywords'][:3])
+
+        # 添加餐厅类型关键词
+        keywords.extend(cuisine_info["restaurant_types"][:2])
+
+        # 添加菜系关键词
+        keywords.append(cuisine_info["cuisine_type"])
+
+        # 如果有推荐的餐厅名称模式
+        if cuisine_info.get('recommended_restaurant_names'):
+            keywords.extend(cuisine_info['recommended_restaurant_names'][:2])
+
+        # 去重
+        keywords = list(dict.fromkeys(keywords))
+
+        return keywords
+
+    def _call_map_api(self, keyword, radius):
+        """调用高德地图API"""
+        if not self.amap_key:
+            # 如果没有API key，返回模拟数据
+            return self._get_mock_restaurants(keyword)
+
+        try:
+            # 确保radius是数字
+            if isinstance(radius, (list, tuple)):
+                radius = radius[0] if radius else 3
+            else:
+                radius = float(radius) if radius else 3
+
+            url = "https://restapi.amap.com/v3/place/around"
+            
+            # 确保位置格式正确
+            if isinstance(self.user_location, list) and len(self.user_location) >= 2:
+                lat = self.user_location[0]
+                lng = self.user_location[1]
+            else:
+                lat = 39.9042
+                lng = 116.4074
+            
+            params = {
+                'key': self.amap_key,
+                'keywords': keyword,
+                'location': f"{lng},{lat}",  # 高德要求：经度在前，纬度在后
+                'radius': int(radius * 1000),  # 转换为米
+                'types': '050000',  # 餐饮服务
+                'sortrule': 'distance',
+                'offset': 25,
+                'page': 1,
+                'extensions': 'all'
+            }
+
+            response = requests.get(url, params=params, timeout=5)
+            data = response.json()
+
+            if data['status'] == '1':
+                pois = data.get('pois', [])
+                results = []
+                
+                for poi in pois:
+                    restaurant = {
+                        'id': poi.get('id', ''),
+                        'name': poi.get('name', ''),
+                        'address': poi.get('address', ''),
+                        'location': poi.get('location', ''),
+                        'tel': poi.get('tel', ''),
+                        'type': poi.get('type', ''),
+                        'typecode': poi.get('typecode', ''),
+                        'distance': int(float(poi.get('distance', 0))),
+                        'biz_ext': poi.get('biz_ext', {})
+                    }
+                    
+                    # 解析评分和价格
+                    biz_ext = restaurant['biz_ext']
+                    restaurant['rating'] = float(biz_ext.get('rating', 0)) if biz_ext.get('rating') else random.uniform(3.5, 5.0)
+                    restaurant['avg_price'] = float(biz_ext.get('cost', 0)) if biz_ext.get('cost') else random.randint(30, 200)
+                    
+                    results.append(restaurant)
+                
+                return results
+            else:
+                st.warning(f"API返回错误: {data.get('info', '未知错误')}")
+                return self._get_mock_restaurants(keyword)
+
+        except Exception as e:
+            st.warning(f"地图API调用失败，使用模拟数据: {str(e)}")
+            return self._get_mock_restaurants(keyword)
+
+    def _get_mock_restaurants(self, keyword):
+        """获取模拟餐厅数据"""
+        # 更真实的餐厅名称库
+        restaurant_templates = {
+            "火锅": ["海底捞火锅", "小龙坎火锅", "蜀大侠火锅", "大龙燚火锅", "德庄火锅"],
+            "川菜": ["眉州东坡", "陈麻婆豆腐", "巴国布衣", "蜀香园", "川味观"],
+            "烤鸭": ["全聚德", "便宜坊", "大董烤鸭", "四季民福", "利群烤鸭"],
+            "日料": ["将太无二", "鮨然", "隐泉日料", "一风堂拉面", "味千拉面"],
+            "西餐": ["王品牛排", "豪客来", "必胜客", "萨莉亚", "新元素"],
+            "烧烤": ["很久以前", "丰茂烤串", "聚点串吧", "木屋烧烤", "串越时光"],
+            "粤菜": ["陶陶居", "广州酒家", "炳胜品味", "点都德", "稻香"],
+            "江浙菜": ["外婆家", "绿茶餐厅", "新白鹿", "弄堂里", "小南国"]
+        }
+        
+        # 默认餐厅名
+        default_names = [
+            f"老王{keyword}馆", f"{keyword}大师", f"正宗{keyword}",
+            f"{keyword}食府", f"阿姨{keyword}店", f"{keyword}小院"
+        ]
+        
+        # 选择合适的餐厅名
+        mock_restaurants = []
+        found_template = False
+        
+        for cuisine, names in restaurant_templates.items():
+            if cuisine in keyword or any(k in keyword for k in names):
+                restaurant_names = names
+                found_template = True
+                break
+        
+        if not found_template:
+            restaurant_names = default_names
+
+        # 基于用户当前位置生成附近的餐厅
+        base_lat, base_lng = self.user_location
+        if isinstance(base_lat, list):
+            base_lat = base_lat[0]
+            base_lng = self.user_location[1]
+
+        for i, name in enumerate(restaurant_names[:8]):
+            # 在用户位置周围随机生成餐厅位置（约3公里范围内）
+            lat_offset = random.uniform(-0.03, 0.03)
+            lng_offset = random.uniform(-0.03, 0.03)
+            
+            lat = base_lat + lat_offset
+            lng = base_lng + lng_offset
+
+            # 计算大概的距离（简化计算）
+            distance = int(((lat - base_lat) ** 2 + (lng - base_lng) ** 2) ** 0.5 * 111000)
+
+            mock_restaurants.append({
+                'id': f'mock_{keyword}_{i}',
+                'name': name,
+                'address': f"模拟地址 - {random.choice(['东路', '西街', '南巷', '北大道'])}{random.randint(1, 999)}号",
+                'location': f"{lng},{lat}",
+                'tel': f"{random.choice(['010', '021', '020', '0755'])}-{random.randint(10000000, 99999999)}",
+                'rating': round(random.uniform(3.5, 5.0), 1),
+                'avg_price': random.randint(30, 200),
+                'distance': distance
+            })
+
+        return mock_restaurants
+
+    def _deduplicate_results(self, results):
+        """去除重复餐厅"""
+        seen = set()
+        unique = []
+
+        for restaurant in results:
+            restaurant_id = restaurant.get('id', restaurant.get('name', ''))
+            if restaurant_id not in seen:
+                seen.add(restaurant_id)
+                unique.append(restaurant)
+
+        return unique
+
+    def _rank_results(self, results, dish_name, cuisine_info):
+        """使用 AI 增强的排序算法"""
+        scored_results = []
+
+        for restaurant in results:
+            score = 0
+
+            # 基础评分逻辑
+            name = restaurant.get('name', '')
+
+            # 1. 餐厅类型匹配
+            for restaurant_type in cuisine_info.get('restaurant_types', []):
+                if restaurant_type in name:
+                    score += 25
+                    break
+
+            # 2. 如果有推荐的餐厅名称模式，额外加分
+            if cuisine_info.get('recommended_restaurant_names'):
+                for pattern in cuisine_info['recommended_restaurant_names']:
+                    if pattern in name:
+                        score += 15
+                        break
+
+            # 3. 评分权重
+            rating = float(restaurant.get('rating', 0))
+            score += rating * 5
+
+            # 4. 距离权重
+            distance = int(restaurant.get('distance', 1000))
+            score += max(0, 30 - distance / 100)
+
+            # 5. 价格匹配（如果 AI 分析了价格区间）
+            if cuisine_info.get('dish_characteristics', {}).get('price_range'):
+                price_range = cuisine_info['dish_characteristics']['price_range']
+                avg_price = restaurant.get('avg_price', 50)
+
+                if price_range in ['低', 'Low'] and avg_price < 50:
+                    score += 10
+                elif price_range in ['中', 'Medium'] and 50 <= avg_price <= 100:
+                    score += 10
+                elif price_range in ['高', 'High'] and avg_price > 100:
+                    score += 10
+
+            # 添加详细信息
+            restaurant['match_score'] = score
+            restaurant['suggested_for'] = dish_name
+            restaurant['cuisine_match'] = cuisine_info['cuisine_type']
+
+            # 如果有 AI 分析的置信度，也加入考虑
+            if cuisine_info.get('confidence', 0) > 0.9:
+                restaurant['ai_recommended'] = True
+
+            scored_results.append(restaurant)
+
+        # 按分数排序
+        return sorted(scored_results, key=lambda x: x['match_score'], reverse=True)
+
     def _display_search_results(self):
         """显示增强的搜索结果"""
         lang = st.session_state.get('language', 'zh')
@@ -251,7 +542,12 @@ class MapSearch:
                     chars = cuisine_info['dish_characteristics']
                     st.markdown(f"**{get_translation('dish_characteristics', lang)}**:")
                     if chars.get('spicy_level'):
-                        st.markdown(f"- {get_translation('spicy_level', lang)}: {'🌶️' * int(chars['spicy_level'])}")
+                        spicy_num = 3  # 默认值
+                        try:
+                            spicy_num = int(float(chars['spicy_level']))
+                        except:
+                            pass
+                        st.markdown(f"- {get_translation('spicy_level', lang)}: {'🌶️' * spicy_num}")
                     if chars.get('price_range'):
                         st.markdown(f"- {get_translation('price_range', lang)}: {chars['price_range']}")
                     if chars.get('cooking_method'):
@@ -266,47 +562,47 @@ class MapSearch:
         for idx, restaurant in enumerate(results[:10]):
             with st.container():
                 # 餐厅信息使用单独的容器
-                restaurant_container = st.container()
-                with restaurant_container:
-                    col1, col2, col3 = st.columns([3, 2, 1])
+                col1, col2, col3 = st.columns([3, 2, 1])
 
-                    with col1:
-                        # 如果是 AI 推荐的，加个标记
-                        ai_badge = "🤖 " if restaurant.get('ai_recommended') else ""
-                        st.markdown(f"**{ai_badge}{idx + 1}. {restaurant['name']}**")
-                        st.caption(restaurant.get('address', get_translation('address_unknown', lang)))
+                with col1:
+                    # 如果是 AI 推荐的，加个标记
+                    ai_badge = "🤖 " if restaurant.get('ai_recommended') else ""
+                    st.markdown(f"**{ai_badge}{idx + 1}. {restaurant['name']}**")
+                    st.caption(restaurant.get('address', get_translation('address_unknown', lang)))
 
-                    with col2:
-                        rating = restaurant.get('rating', 0)
-                        st.markdown(f"⭐ {rating}")
-                        if 'avg_price' in restaurant:
-                            st.markdown(f"💰 {get_translation('avg_price', lang)} ¥{restaurant['avg_price']}")
+                with col2:
+                    rating = restaurant.get('rating', 0)
+                    st.markdown(f"⭐ {rating}")
+                    if 'avg_price' in restaurant:
+                        st.markdown(f"💰 {get_translation('avg_price', lang)} ¥{restaurant['avg_price']}")
 
-                    with col3:
-                        if 'distance' in restaurant:
-                            distance = restaurant['distance']
-                            if distance < 1000:
-                                st.markdown(f"📍 {distance}m")
-                            else:
-                                st.markdown(f"📍 {distance / 1000:.1f}km")
+                with col3:
+                    if 'distance' in restaurant:
+                        distance = restaurant['distance']
+                        if distance < 1000:
+                            st.markdown(f"📍 {distance}m")
+                        else:
+                            st.markdown(f"📍 {distance / 1000:.1f}km")
 
-                # 操作按钮使用独立的容器，避免嵌套
-                button_container = st.container()
-                with button_container:
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        if st.button(get_translation('view_details', lang), key=f"detail_{idx}"):
-                            self._show_restaurant_detail(restaurant)
-                    with col2:
-                        if st.button(get_translation('navigate', lang), key=f"nav_{idx}"):
-                            # 不要在这里直接调用会创建columns的方法
-                            st.session_state['navigate_to'] = restaurant
-                            st.rerun()
-                    with col3:
-                        if st.button(get_translation('favorite', lang), key=f"fav_{idx}"):
-                            self._add_to_favorites(restaurant)
+                # 操作按钮
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button(get_translation('view_details', lang), key=f"detail_{idx}"):
+                        self._show_restaurant_detail(restaurant)
+                with col2:
+                    if st.button(get_translation('navigate', lang), key=f"nav_{idx}"):
+                        st.session_state['navigate_to'] = restaurant
+                        self._navigate_to_restaurant(restaurant)
+                with col3:
+                    if st.button(get_translation('favorite', lang), key=f"fav_{idx}"):
+                        self._add_to_favorites(restaurant)
 
                 st.divider()
+
+        # 处理导航
+        if st.session_state.get('navigate_to'):
+            self._navigate_to_restaurant(st.session_state['navigate_to'])
+            st.session_state['navigate_to'] = None
 
     def _render_map(self):
         """渲染地图"""
@@ -449,6 +745,35 @@ class MapSearch:
         # 显示地图
         st_folium(m, width=700, height=500, key="restaurant_map")
 
+    def _geocode_address(self, address):
+        """将地址转换为坐标"""
+        if not self.amap_key:
+            st.error("需要API密钥才能使用地址定位功能")
+            return None
+
+        try:
+            url = "https://restapi.amap.com/v3/geocode/geo"
+            params = {
+                'key': self.amap_key,
+                'address': address,
+                'city': st.session_state.get('city_select', '北京')
+            }
+
+            response = requests.get(url, params=params)
+            data = response.json()
+
+            if data['status'] == '1' and data['geocodes']:
+                location = data['geocodes'][0]['location']
+                lng, lat = map(float, location.split(','))
+                return [lat, lng]
+            else:
+                st.error("无法定位该地址")
+                return None
+
+        except Exception as e:
+            st.error(f"地址解析失败: {str(e)}")
+            return None
+
     def _show_restaurant_detail(self, restaurant):
         """显示餐厅详情"""
         lang = st.session_state.get('language', 'zh')
@@ -484,7 +809,7 @@ class MapSearch:
         st.divider()
 
     def _navigate_to_restaurant(self, restaurant):
-        """导航到餐厅 - 使用expander避免布局冲突"""
+        """导航到餐厅"""
         lang = st.session_state.get('language', 'zh')
         
         if 'location' in restaurant:
