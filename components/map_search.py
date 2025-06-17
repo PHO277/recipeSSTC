@@ -93,7 +93,8 @@ class MapSearch:
                 step=0.5,
                 key="min_rating"
             )
-
+        if 'search_radius' not in st.session_state:
+            st.session_state.search_radius = 3
         # 获取search_radius的值（如果高级选项未展开，使用默认值）
         search_radius = st.session_state.get('search_radius', 3)
 
