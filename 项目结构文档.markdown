@@ -26,12 +26,18 @@ recipe_generator/
 │   ├── settings.py         # 用户设置页面
 │   ├── footer.py           # 页脚组件
 │   ├── image_input_modal.py # 图像输入模态窗口组件
-│   └── recipe_display.py    # 食谱展示与交互组件
+│   ├── recipe_display.py    # 食谱展示与交互组件
+│   ├── map_search.py       # 地图搜索功能组件（新增）
+│   └── config_checker.py   # 配置检查组件（新增）
 ├── utils/
-│   └── session.py          # 会话状态初始化和项目路径配置
+│   ├── session.py          # 会话状态初始化和项目路径配置
+│   ├── translations.py     # 多语言支持（新增）
+│   └── config_manager.py   # 配置管理器（新增）
 ├── mongodb_manager.py       # MongoDB数据库管理，处理用户和食谱数据
 ├── nutrition_analyzer.py    # 解析和格式化营养信息
-└── llm_interface.py        # 调用语言模型生成食谱和营养信息
+├── llm_interface.py        # 调用语言模型生成食谱和营养信息
+├── check_sensitive.py      # 敏感信息检查脚本（新增）
+├── requirements.txt        # Python依赖列表（更新）
 ```
 ### Flask版本 (新增生产版本)
 ```
@@ -185,7 +191,28 @@ flask_version/
 - `_display_save_options(recipe_data)`: 提供保存、评分、标签、备注、下载等表单与按钮。
 - `_display_download_button(recipe_data)`: 生成下载按钮，导出食谱为txt。
 - `_format_recipe_for_download(recipe_data)`: 格式化食谱文本用于下载。
+Streamlit版本 (新增文件)
+#### 17. components/map_search.py
+**功能描述**：
 
+- 实现餐厅地图搜索功能，根据用户输入的菜品智能推荐附近相关餐厅。
+- 支持菜品类型智能识别，自动匹配对应的餐厅类型。
+- 集成高德地图API，支持真实餐厅数据搜索。
+- 提供模拟数据模式，无API密钥时仍可使用。
+- 支持多城市切换、距离和评分排序、餐厅详情查看、导航和收藏功能。
+
+**主要接口功能**：
+
+- `MapSearch.__init__()`: 初始化地图API密钥和默认位置。
+- `render_map_page()`: 渲染地图搜索主页面。
+- `_render_search_panel()`: 渲染搜索面板，包含菜品输入、高级选项和搜索按钮。
+- `_search_restaurants(dish_name, radius)`: 执行餐厅搜索流程。
+- `_analyze_dish_cuisine(dish_name)`: 分析菜品所属菜系。
+- `_build_search_keywords(dish_name, cuisine_info)`: 构建搜索关键词。
+- `_call_map_api(keyword, radius)`: 调用高德地图API搜索餐厅。
+- `_get_mock_restaurants(keyword)`: 生成模拟餐厅数据。
+- `_rank_results(results, dish_name, cuisine_info)`: 对搜索结果进行智能排序。
+- `_render_map()`: 渲染地图组件，显示餐厅位置标记。
 ### Flask版本 (新增文件)
 
 #### 17. flask_version/integrated_app.py
