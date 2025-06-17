@@ -194,6 +194,9 @@ LANGUAGES = {
             "add_ingredients": "添加食材",
             "cancel": "取消",
             "no_ingredients_detected": "未检测到食材",
+            "view": "查看",
+            "back_to_list": "返回列表",
+            "favorite_diet": "最喜欢的饮食类型",
         }
     },
     'en': {
@@ -390,6 +393,9 @@ LANGUAGES = {
             "add_ingredients": "Add Ingredients",
             "cancel": "Cancel",
             "no_ingredients_detected": "No ingredients detected",
+            'view': 'View',
+            'back_to_list': 'Back to List',
+            'favorite_diet': 'Favorite Diet Type',
         }
     },
     'ja': {
@@ -586,11 +592,17 @@ LANGUAGES = {
             "add_ingredients": "食材追加",
             "cancel": "キャンセル",
             "no_ingredients_detected": "食材が検出されませんでした",
+<<<<<<< HEAD
 # 在 translations 字典中添加
             'map_search': {
             'zh': '🗺️ 地图搜索',
             'en': '🗺️ Map Search'
 },
+=======
+            'view': '表示',
+            'back_to_list': 'リストに戻る',
+            'favorite_diet': 'お気に入りの食事タイプ',
+>>>>>>> 6eee97d018bb4943dec263cac7c4105178eeb878
         }
     }
 }
