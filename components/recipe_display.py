@@ -7,46 +7,6 @@ class RecipeDisplay:
     def __init__(self):
         self.t = lambda key: get_translation(key, st.session_state.language)
     
-    def display_recipe_card(self, recipe_data, show_actions=True, key_prefix=""):
-        """显示食谱卡片 - 用于我的食谱页面"""
-        t = self.t
-        
-        # 处理创建时间
-        created = recipe_data.get('created')
-        if isinstance(created, str):
-            try:
-                created = datetime.fromisoformat(created)
-            except:
-                created = datetime.now()
-        elif not isinstance(created, datetime):
-            created = datetime.now()
-        
-        # 构建展示标题
-        title = recipe_data.get('title', '')
-        if not title:
-            # 如果没有标题，使用食材作为标题
-            ingredients = recipe_data.get('ingredients', [])
-            if isinstance(ingredients, list):
-                title = ', '.join(ingredients[:3]) + ('...' if len(ingredients) > 3 else '')
-            else:
-                title = str(ingredients)[:50] + ('...' if len(str(ingredients)) > 50 else '')
-        
-        # 构建展示文本
-        display_text = f"{created.strftime('%Y-%m-%d')} | {title}"
-        if recipe_data.get('rating', 0) > 0:
-            display_text += f" | {'⭐' * recipe_data.get('rating', 0)}"
-        
-        with st.expander(display_text):
-            col_info1, col_info2 = st.columns([3, 1])
-            
-            with col_info1:
-                self._display_recipe_metadata(recipe_data)
-                self._display_recipe_content(recipe_data)
-            
-            with col_info2:
-                if show_actions:
-                    self._display_recipe_actions(recipe_data, key_prefix)
-    
     def display_full_recipe(self, recipe_data, show_save_options=True):
         """显示完整食谱 - 用于生成食谱页面"""
         t = self.t
@@ -88,89 +48,6 @@ class RecipeDisplay:
         
         if show_save_options:
             self._display_save_options(recipe_data)
-    
-    def _display_recipe_metadata(self, recipe_data):
-        """显示食谱元数据"""
-        t = self.t
-        
-        # 显示标签
-        if recipe_data.get('tags'):
-            tags_html = ''.join([f'<span class="tag" style="background-color: #e1f5fe; padding: 2px 8px; border-radius: 10px; margin: 2px; display: inline-block; font-size: 0.8em;">{tag}</span>' for tag in recipe_data['tags']])
-            st.markdown(tags_html, unsafe_allow_html=True)
-        
-        # 显示基本信息
-        info_items = []
-        if recipe_data.get('cuisine'):
-            info_items.append(f"🍽️ {recipe_data['cuisine']}")
-        if recipe_data.get('prep_time'):
-            info_items.append(f"⏱️ {recipe_data['prep_time']}")
-        if recipe_data.get('cook_time'):
-            info_items.append(f"🕐 {recipe_data['cook_time']}")
-        if recipe_data.get('difficulty'):
-            info_items.append(f"📊 {recipe_data['difficulty']}")
-        if recipe_data.get('serves'):
-            info_items.append(f"👥 {recipe_data['serves']}")
-        
-        if info_items:
-            st.markdown(" | ".join(info_items))
-    
-    def _display_recipe_content(self, recipe_data):
-        """显示食谱内容"""
-        t = self.t
-        
-        # 显示食材
-        ingredients = recipe_data.get('ingredients', [])
-        if ingredients:
-            if isinstance(ingredients, list):
-                ingredients_text = ', '.join(ingredients)
-            else:
-                ingredients_text = str(ingredients)
-            st.markdown(f"**{t('ingredients')}**: {ingredients_text}")
-        
-        # 显示备注
-        if recipe_data.get('notes'):
-            st.markdown(f"**{t('notes')}**: {recipe_data['notes']}")
-        
-        # 显示完整食谱内容
-        st.markdown("---")
-        st.markdown(f"### {t('recipe_content')}")
-        
-        # 显示标题
-        if recipe_data.get('title'):
-            st.markdown(f"**{t('recipe_title')}**: {recipe_data['title']}")
-        
-        # 显示描述
-        if recipe_data.get('description'):
-            st.markdown(f"**{t('recipe_description')}**: {recipe_data['description']}")
-        
-        # 显示制作步骤
-        instructions = recipe_data.get('instructions', [])
-        if instructions:
-            st.markdown(f"**{t('instructions')}**:")
-            if isinstance(instructions, list):
-                for i, step in enumerate(instructions, 1):
-                    st.markdown(f"{i}. {step}")
-            else:
-                st.markdown(instructions)
-        
-        # 显示营养信息
-        nutrition = NutritionAnalyzer()
-        nutrition_info = nutrition.parse_nutrition(recipe_data)
-        if nutrition_info:
-            st.markdown(f"### {t('nutrition_info')}")
-            st.text(nutrition_info)
-    
-    def _display_recipe_actions(self, recipe_data, key_prefix):
-        """显示食谱操作按钮"""
-        t = self.t
-        
-        if st.button(f"🗑️ {t('delete')}", key=f"{key_prefix}del_{recipe_data['_id']}"):
-            if st.session_state.db.delete_recipe(str(recipe_data['_id'])):
-                st.success(t('recipe_deleted'))
-                st.rerun()
-        
-        if st.button(f"📤 {t('share')}", key=f"{key_prefix}share_{recipe_data['_id']}"):
-            st.info(t('share_coming_soon'))
     
     def _display_nutrition_info(self, recipe_data):
         """显示营养信息"""

@@ -368,37 +368,25 @@ Requirements:
                                             unique_name = f"{uploaded_file.name}_{idx}" if uploaded_file.name else f"image_{idx}"
                                             images_data.append((uploaded_file.name, img_base64))  # 保持原始名称用于API调用
                                         except Exception as e:
-                                            st.error(f"处理图像 {uploaded_file.name} 时出错: {str(e)}")
+                                            st.error(f"Error when processing {uploaded_file.name} : {str(e)}")
                                             continue
                                     
                                     if not images_data:
                                         st.error(t('no_valid_images'))
                                         return
                                     
-                                    # 创建进度展示
-                                    progress_text = f"正在并行处理 {len(images_data)} 张图片..."
-                                    progress_bar = st.progress(0, text=progress_text)
-                                    
-                                    # 并行调用API识别食材
+                                    # 并行调用API识别食材E
                                     recognition_results = self.call_siliconflow_api_parallel(images_data, st.session_state.language)
                                     st.session_state.recognition_results = recognition_results
                                     
-                                    progress_bar.progress(50, text="正在合并识别结果...")
                                     
                                     # 合并所有图片的识别结果
                                     all_ingredients = self.merge_ingredients_from_results(recognition_results)
                                     
-                                    progress_bar.progress(100, text="识别完成!")
                                     
                                     if not all_ingredients:
                                         st.warning(t('no_ingredients_detected'))
-                                        # 显示每张图片的详细结果
-                                        st.markdown("**各图片识别详情:**")
-                                        for image_name, ingredients in recognition_results.items():
-                                            if ingredients:
-                                                st.write(f"- {image_name}: {', '.join(ingredients)}")
-                                            else:
-                                                st.write(f"- {image_name}: 未识别到食材")
+                                        
                                         return
                                     
                                     st.session_state.recognized_ingredients = all_ingredients
@@ -408,8 +396,6 @@ Requirements:
                                         ingredient: False for ingredient in all_ingredients
                                     }
                                     
-                                    # 清除进度条
-                                    progress_bar.empty()
                                     st.rerun()
                                     
                                 except Exception as e:
