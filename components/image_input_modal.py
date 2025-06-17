@@ -36,12 +36,12 @@ class ImageInputModal:
         
         # 统一的英语提示词，要求使用指定语言回复但保持JSON字段为英文
         unified_prompt = f"""Please identify all unique ingredients in this image and return them in a JSON format.
-Requirements:
-1. Respond in {language} language for the ingredient names
-2. Always use "ingredients" as the JSON field name (in English)
-3. Return only unique ingredients visible in this image (no duplicates)
-4. Format: {{"ingredients": ["ingredient1", "ingredient2", ...]}}
-5. If no ingredients are found in the image, return {{"ingredients": []}}"""
+    Requirements:
+    1. Respond in {language} language for the ingredient names
+    2. Always use "ingredients" as the JSON field name (in English)
+    3. Return only unique ingredients visible in this image (no duplicates)
+    4. Format: {{"ingredients": ["ingredient1", "ingredient2", ...]}}
+    5. If no ingredients are found in the image, return {{"ingredients": []}}"""
         
         content.append({
             "type": "text",
@@ -65,7 +65,7 @@ Requirements:
                 }
             ],
             "stream": False,
-            "max_tokens": 512,
+            "max_tokens": 256,
             "temperature": 0.3,
             "top_p": 0.7,
         }
@@ -75,31 +75,39 @@ Requirements:
             "Content-Type": "application/json"
         }
         
-        try:
-            response = requests.post(self.api_url, json=payload, headers=headers, timeout=30)
-            
-            print(f"图片 {image_name} API调用状态: {response.status_code}")  # 调试输出
-
-            if response.status_code == 200:
-                try:
-                    raw_content = response.json()['choices'][0]['message']['content']
-                    ingredients = self._parse_ingredients_from_response(raw_content)
-                    print(f"图片 {image_name} 识别到的食材: {ingredients}")
-                    return image_name, ingredients
-                    
-                except Exception as e:
-                    print(f"图片 {image_name} API响应解析错误: {str(e)}")
-                    return image_name, []
-            else:
-                print(f"图片 {image_name} API调用失败: {response.status_code} - {response.text}")
-                return image_name, []
+        max_retries = 1  # 最大重试次数
+        retry_count = 0
+        
+        while retry_count <= max_retries:
+            try:
+                response = requests.post(self.api_url, json=payload, headers=headers, timeout=10)  #  设置超时时间为10秒
                 
-        except requests.exceptions.Timeout:
-            print(f"图片 {image_name} API调用超时")
-            return image_name, []
-        except Exception as e:
-            print(f"图片 {image_name} API调用异常: {str(e)}")
-            return image_name, []
+                print(f"图片 {image_name} API调用状态: {response.status_code}")  # 调试输出
+
+                if response.status_code == 200:
+                    try:
+                        raw_content = response.json()['choices'][0]['message']['content']
+                        ingredients = self._parse_ingredients_from_response(raw_content)
+                        print(f"图片 {image_name} 识别到的食材: {ingredients}")
+                        return image_name, ingredients
+                        
+                    except Exception as e:
+                        print(f"图片 {image_name} API响应解析错误: {str(e)}")
+                        return image_name, []
+                else:
+                    print(f"图片 {image_name} API调用失败: {response.status_code} - {response.text}")
+                    return image_name, []
+                    
+            except requests.exceptions.Timeout:
+                retry_count += 1
+                if retry_count > max_retries:
+                    print(f"图片 {image_name} API调用超时，已达到最大重试次数")
+                    return image_name, []
+                print(f"图片 {image_name} API调用超时，正在重试 ({retry_count}/{max_retries})")
+                
+            except Exception as e:
+                print(f"图片 {image_name} API调用异常: {str(e)}")
+                return image_name, []
     
     def _parse_ingredients_from_response(self, raw_content: str) -> List[str]:
         """从API响应中解析食材列表"""
