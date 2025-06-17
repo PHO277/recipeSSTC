@@ -1,3 +1,5 @@
+# utils/translations.py
+
 # 多语言支持
 LANGUAGES = {
     'zh': {
@@ -181,22 +183,23 @@ LANGUAGES = {
             'vitamin_a': '维生素A',
             'calcium': '钙',
             'iron': '铁',
-            "image_recognition": "从图片识别食材",
-            "image_ingredient_recognition": "图像食材识别",
-            "upload_images": "上传图片或拖入图片",
-            "uploaded_images": "已上传图片",
-            "start_recognition": "开始识别",
-            "recognizing_ingredients": "正在识别食材...",
-            "recognition_error": "识别失败",
-            "recognized_ingredients": "识别到的食材",
-            "select_all": "全选",
-            "random_select": "随机选择2-4个食材",
-            "add_ingredients": "添加食材",
-            "cancel": "取消",
-            "no_ingredients_detected": "未检测到食材",
-            "view": "查看",
-            "back_to_list": "返回列表",
-            "favorite_diet": "最喜欢的饮食类型",
+            'image_recognition': '从图片识别食材',
+            'image_ingredient_recognition': '图像食材识别',
+            'upload_images': '上传图片或拖入图片',
+            'uploaded_images': '已上传图片',
+            'start_recognition': '开始识别',
+            'recognizing_ingredients': '正在识别食材...',
+            'recognition_error': '识别失败',
+            'recognized_ingredients': '识别到的食材',
+            'select_all': '全选',
+            'random_select': '随机选择2-4个食材',
+            'add_ingredients': '添加食材',
+            'cancel': '取消',
+            'no_ingredients_detected': '未检测到食材',
+            'view': '查看',
+            'back_to_list': '返回列表',
+            'favorite_diet': '最喜欢的饮食类型',
+            'map_search': '🗺️ 地图搜索'
         }
     },
     'en': {
@@ -380,22 +383,23 @@ LANGUAGES = {
             'vitamin_a': 'Vitamin A',
             'calcium': 'Calcium',
             'iron': 'Iron',
-            "image_recognition": "Image Recognition for Ingredients",
-            "image_ingredient_recognition": "Image Ingredient Recognition",
-            "upload_images": "Upload images or drag and drop",
-            "uploaded_images": "Uploaded Images",
-            "start_recognition": "Start Recognition",
-            "recognizing_ingredients": "Recognizing ingredients...",
-            "recognition_error": "Recognition failed",
-            "recognized_ingredients": "Recognized Ingredients",
-            "select_all": "Select All",
-            "random_select": "Randomly select 2-4 ingredients",
-            "add_ingredients": "Add Ingredients",
-            "cancel": "Cancel",
-            "no_ingredients_detected": "No ingredients detected",
+            'image_recognition': 'Image Recognition for Ingredients',
+            'image_ingredient_recognition': 'Image Ingredient Recognition',
+            'upload_images': 'Upload images or drag and drop',
+            'uploaded_images': 'Uploaded Images',
+            'start_recognition': 'Start Recognition',
+            'recognizing_ingredients': 'Recognizing ingredients...',
+            'recognition_error': 'Recognition failed',
+            'recognized_ingredients': 'Recognized Ingredients',
+            'select_all': 'Select All',
+            'random_select': 'Randomly select 2-4 ingredients',
+            'add_ingredients': 'Add Ingredients',
+            'cancel': 'Cancel',
+            'no_ingredients_detected': 'No ingredients detected',
             'view': 'View',
             'back_to_list': 'Back to List',
             'favorite_diet': 'Favorite Diet Type',
+            'map_search': '🗺️ Map Search'
         }
     },
     'ja': {
@@ -579,30 +583,23 @@ LANGUAGES = {
             'vitamin_a': 'ビタミンA',
             'calcium': 'カルシウム',
             'iron': '鉄分',
-            "image_recognition": "画像認識による食材",
-            "image_ingredient_recognition": "画像食材認識",
-            "upload_images": "画像をアップロードまたはドラッグ",
-            "uploaded_images": "アップロード画像",
-            "start_recognition": "認識開始",
-            "recognizing_ingredients": "食材を認識中...",
-            "recognition_error": "認識失敗",
-            "recognized_ingredients": "認識された食材",
-            "select_all": "すべて選択",
-            "random_select": "2-4個の食材をランダム選択",
-            "add_ingredients": "食材追加",
-            "cancel": "キャンセル",
-            "no_ingredients_detected": "食材が検出されませんでした",
-<<<<<<< HEAD
-# 在 translations 字典中添加
-            'map_search': {
-            'zh': '🗺️ 地图搜索',
-            'en': '🗺️ Map Search'
-},
-=======
+            'image_recognition': '画像認識による食材',
+            'image_ingredient_recognition': '画像食材認識',
+            'upload_images': '画像をアップロードまたはドラッグ',
+            'uploaded_images': 'アップロード画像',
+            'start_recognition': '認識開始',
+            'recognizing_ingredients': '食材を認識中...',
+            'recognition_error': '認識失敗',
+            'recognized_ingredients': '認識された食材',
+            'select_all': 'すべて選択',
+            'random_select': '2-4個の食材をランダム選択',
+            'add_ingredients': '食材追加',
+            'cancel': 'キャンセル',
+            'no_ingredients_detected': '食材が検出されませんでした',
             'view': '表示',
             'back_to_list': 'リストに戻る',
             'favorite_diet': 'お気に入りの食事タイプ',
->>>>>>> 6eee97d018bb4943dec263cac7c4105178eeb878
+            'map_search': '🗺️ 地図検索'
         }
     }
 }
