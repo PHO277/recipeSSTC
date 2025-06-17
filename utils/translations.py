@@ -3,7 +3,7 @@
 # 多语言支持
 LANGUAGES = {
     'zh': {
-        'name': '🇨🇳 中文',
+       'name': '🇨🇳 中文',
         'translations': {
             'app_title': '智能食谱生成器',
             'app_subtitle': '基于AI的个性化食谱推荐系统',
@@ -199,7 +199,7 @@ LANGUAGES = {
             'view': '查看',
             'back_to_list': '返回列表',
             'favorite_diet': '最喜欢的饮食类型',
-            'map_search': '🗺️ 地图搜索'
+            'map_search': '🗺️ 地图搜索',
             'restaurant_map_search': '餐厅地图搜索',
             'search_dish_recommend_restaurant': '搜索您想吃的菜品，智能推荐附近餐厅',
             'tip': '提示',
@@ -212,7 +212,7 @@ LANGUAGES = {
             'random_recommend': '随机推荐',
             'searching_restaurants': '正在搜索相关餐厅...',
             'found_restaurants': '找到 {} 家相关餐厅！',
-            'no_restaurants_found': '没有找到相关餐厅，请尝试其他关键词。'
+            'no_restaurants_found': '没有找到相关餐厅，请尝试其他关键词。',
             'searching_dish_restaurants': '正在搜索 {} 相关餐厅...',
             'food_expert_system_prompt': '你是一个美食专家，擅长分析菜品和推荐餐厅。',
             'ai_analysis_failed': 'AI分析失败，使用规则匹配: {}',
