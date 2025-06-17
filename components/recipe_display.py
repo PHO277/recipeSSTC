@@ -2,12 +2,13 @@ import streamlit as st
 from datetime import datetime
 from utils.translations import get_translation
 from nutrition_analyzer import NutritionAnalyzer
+from text_to_speech import render_tts_component_improved, render_tts_component_simple
 
 class RecipeDisplay:
     def __init__(self):
         self.t = lambda key: get_translation(key, st.session_state.language)
     
-    def display_full_recipe(self, recipe_data, show_save_options=True):
+    def display_full_recipe(self, recipe_data, show_save_options=True, enable_tts=True):
         """显示完整食谱 - 用于生成食谱页面"""
         t = self.t
         
@@ -46,8 +47,93 @@ class RecipeDisplay:
         # 显示其他信息
         self._display_recipe_details(recipe_data)
         
+        # 添加语音功能 - 在保存选项之前显示
+        if enable_tts:
+            self._display_tts_section(recipe_data)
+        
         if show_save_options:
             self._display_save_options(recipe_data)
+    
+    def _display_tts_section(self, recipe_data):
+        """显示语音播报功能"""
+        t = self.t
+        
+        st.markdown("---")
+        
+        # 创建语音内容
+        tts_text = self._format_recipe_for_tts(recipe_data)
+        
+        # 提供TTS选项选择
+        tts_option = st.radio(
+            "🔊 语音播报模式",
+            options=["简化版", "完整版"],
+            horizontal=True,
+            help="简化版重点显示文本内容，完整版提供多种语音选项"
+        )
+        
+        # 根据选择显示相应的TTS组件
+        if tts_option == "简化版":
+            render_tts_component_simple(
+                text=tts_text, 
+                language=st.session_state.get('language', 'zh'),
+                key="recipe_simple"
+            )
+        else:
+            render_tts_component_improved(
+                text=tts_text,
+                language=st.session_state.get('language', 'zh'), 
+                key="recipe_full"
+            )
+    
+    def _format_recipe_for_tts(self, recipe_data):
+        """格式化食谱内容用于语音播报"""
+        t = self.t
+        
+        tts_parts = []
+        
+        # 标题
+        if recipe_data.get('title'):
+            tts_parts.append(f"{t('recipe_title')}: {recipe_data['title']}")
+        
+        # 描述
+        if recipe_data.get('description'):
+            tts_parts.append(f"{t('recipe_description')}: {recipe_data['description']}")
+        
+        # 食材
+        ingredients = recipe_data.get('ingredients', [])
+        if ingredients:
+            tts_parts.append(f"{t('ingredients')}:")
+            if isinstance(ingredients, list):
+                for ingredient in ingredients:
+                    tts_parts.append(ingredient)
+            else:
+                tts_parts.append(str(ingredients))
+        
+        # 制作步骤
+        instructions = recipe_data.get('instructions', [])
+        if instructions:
+            tts_parts.append(f"{t('instructions')}:")
+            if isinstance(instructions, list):
+                for i, step in enumerate(instructions, 1):
+                    tts_parts.append(f"第{i}步: {step}")
+            else:
+                tts_parts.append(str(instructions))
+        
+        # 其他信息
+        detail_parts = []
+        if recipe_data.get('serves'):
+            detail_parts.append(f"{t('serves')}: {recipe_data['serves']}")
+        if recipe_data.get('prep_time'):
+            detail_parts.append(f"{t('prep_time')}: {recipe_data['prep_time']}")
+        if recipe_data.get('cook_time'):
+            detail_parts.append(f"{t('cook_time')}: {recipe_data['cook_time']}")
+        if recipe_data.get('difficulty'):
+            detail_parts.append(f"{t('difficulty')}: {recipe_data['difficulty']}")
+        
+        if detail_parts:
+            tts_parts.extend(detail_parts)
+        
+        return " ".join(tts_parts)
     
     def _display_nutrition_info(self, recipe_data):
         """显示营养信息"""
@@ -147,13 +233,6 @@ class RecipeDisplay:
                     use_container_width=True
                 )
             
-            with col_action3:
-                # 下载按钮需要在表单外，或者使用html方式嵌入
-                pass
-            
-            with col_action3:
-                pass
-            
             if save_btn:
                 # 准备保存数据
                 save_data = recipe_data.copy()
@@ -171,8 +250,6 @@ class RecipeDisplay:
                     st.error(f"{t('save_error')}: {str(e)}")    
 
                 st.session_state.recipe_data = None # 清空当前食谱数据
-            
-            
         
         # 下载按钮需要在表单外单独显示
         with st.container():
@@ -180,8 +257,6 @@ class RecipeDisplay:
             with col_download:
                 self._display_download_button(recipe_data)
     
-    
-
     def _display_download_button(self, recipe_data):
         """显示下载按钮"""
         t = self.t
@@ -262,3 +337,47 @@ class RecipeDisplay:
         lines.append(f"{t('generated_on')}: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
         
         return '\n'.join(lines)
+    
+    def display_recipe_with_custom_tts(self, recipe_data, tts_mode="simple", show_save_options=True):
+        """显示食谱并提供自定义TTS选项"""
+        t = self.t
+        
+        # 显示完整食谱内容（不包含默认TTS）
+        self.display_full_recipe(recipe_data, show_save_options=show_save_options, enable_tts=False)
+        
+        # 自定义TTS部分
+        st.markdown("---")
+        st.markdown("### 🎙️ 语音播报功能")
+        
+        # 创建语音内容
+        tts_text = self._format_recipe_for_tts(recipe_data)
+        
+        if tts_mode == "simple":
+            render_tts_component_simple(
+                text=tts_text,
+                language=st.session_state.get('language', 'zh'),
+                key="custom_simple"
+            )
+        elif tts_mode == "advanced":
+            render_tts_component_improved(
+                text=tts_text,
+                language=st.session_state.get('language', 'zh'),
+                key="custom_advanced"
+            )
+        else:
+            # 允许用户选择TTS模式
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔊 简化版朗读", use_container_width=True):
+                    render_tts_component_simple(
+                        text=tts_text,
+                        language=st.session_state.get('language', 'zh'),
+                        key="custom_choice_simple"
+                    )
+            with col2:
+                if st.button("🎯 完整版朗读", use_container_width=True):
+                    render_tts_component_improved(
+                        text=tts_text,
+                        language=st.session_state.get('language', 'zh'),
+                        key="custom_choice_advanced"
+                    )
