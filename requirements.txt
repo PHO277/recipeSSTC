@@ -7,3 +7,5 @@ folium>=0.14.0
 streamlit-folium>=0.15.0
 python-dotenv>=1.0.0
 Pillow>=10.0.0
+gtts>=2.5.0
+pydub>=0.25.1
