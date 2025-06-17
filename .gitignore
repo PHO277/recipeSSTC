@@ -27,12 +27,21 @@ env/
 .idea/vcs.xml
 .idea/jsLibraryMappings.xml
 
+# VSCode 相关
+.vscode/
+*.code-workspace
+
 # 环境变量和密钥
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 secrets.toml
 .streamlit/secrets.toml
+!.streamlit/secrets.toml.example
+config.ini
+*.key
+*.pem
+*.cert
 
 # 操作系统相关
 .DS_Store
@@ -48,11 +57,13 @@ desktop.ini
 *.log
 logs/
 *.log.*
+log/
 
 # 数据库文件
 *.db
 *.sqlite
 *.sqlite3
+*.mongodb
 
 # 临时文件
 *.tmp
@@ -60,6 +71,7 @@ logs/
 *.bak
 *.swp
 *~
+.cache/
 
 # 测试覆盖率
 htmlcov/
@@ -67,20 +79,76 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover
+.pytest_cache/
+.tox/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb_checkpoints
 
 # 构建文件
 build/
 dist/
 *.egg-info/
 .eggs/
+*.egg
+MANIFEST
 
-# 用户上传的文件（如果有）
+# 文档构建
+docs/_build/
+site/
+
+# 用户上传的文件
 uploads/
 media/
+static/uploads/
+user_data/
 
 # 本地配置
 config.local.py
 settings.local.py
+local_settings.py
+instance/
+
+# Node.js (如果使用了前端框架)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Flask 相关
+instance/
+.webassets-cache
+
+# Streamlit 相关
+.streamlit/
+!.streamlit/config.toml
+
+# 备份文件
+*.backup
+backup/
+backups/
+
+# 性能分析
+*.prof
+*.lprof
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# 其他 IDE
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
+*.tmproj
+*.tmproject
+tmtags

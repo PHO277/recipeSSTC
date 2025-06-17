@@ -586,6 +586,11 @@ LANGUAGES = {
             "add_ingredients": "食材追加",
             "cancel": "キャンセル",
             "no_ingredients_detected": "食材が検出されませんでした",
+# 在 translations 字典中添加
+            'map_search': {
+            'zh': '🗺️ 地图搜索',
+            'en': '🗺️ Map Search'
+},
         }
     }
 }
