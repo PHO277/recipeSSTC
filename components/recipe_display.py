@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 from utils.translations import get_translation
 from nutrition_analyzer import NutritionAnalyzer
-from text_to_speech import render_tts_component_improved, render_tts_component_simple
+from components.text_to_speech import render_tts_component_improved, render_tts_component_simple
 
 class RecipeDisplay:
     def __init__(self):
