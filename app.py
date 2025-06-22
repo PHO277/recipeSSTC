@@ -1,5 +1,4 @@
 import streamlit as st
-
 # 必须在最开始设置页面配置
 st.set_page_config(
     page_title="Smart Recipe Generator | 智能食谱生成器",
@@ -12,7 +11,6 @@ st.set_page_config(
         'About': "# Smart Recipe Generator\n智能食谱生成器 - 让AI帮您规划每一餐"
     }
 )
-
 # 然后导入其他模块 - 注意这里只导入 load_css
 from config.page_config import load_css  # 只导入 load_css，不导入 setup_page
 from utils.session import initialize_session
@@ -30,13 +28,10 @@ from components.map_search import MapSearch
 def main():
     # 加载CSS样式
     load_css()
-
     # 初始化会话状态
     initialize_session()
-
     # 渲染侧边栏
     render_sidebar()
-
     # 根据登录状态显示内容
     if not st.session_state.logged_in:
         render_home()
@@ -45,13 +40,13 @@ def main():
         tab_list = [
             get_translation('generate_recipe', st.session_state.language),
             get_translation('my_recipes', st.session_state.language),
-            "🗺️ 地图搜索",  # 新增地图标签
+            get_translation('map_search', st.session_state.language),  # 修改这里：使用翻译函数
             get_translation('discover', st.session_state.language),
             get_translation('statistics', st.session_state.language),
             get_translation('settings', st.session_state.language)
         ]
         tabs = st.tabs(tab_list)
-
+        
         with tabs[0]:
             render_generate_recipe()
         with tabs[1]:
@@ -65,7 +60,6 @@ def main():
             render_statistics()
         with tabs[5]:
             render_settings()
-
     # 渲染页脚
     render_footer()
 
