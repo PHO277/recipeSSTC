@@ -46,39 +46,39 @@ class MapSearch:
         """渲染地图搜索页面"""
         lang = st.session_state.get('language', 'zh')
         
-        st.title(f"🗺️ 餐厅地图搜索")
-        st.markdown(f"### 搜索您想吃的菜品，智能推荐附近餐厅")
+        st.title(f"🗺️ {get_translation('map_search_title', lang)}")
+        st.markdown(f"### {get_translation('map_search_subtitle', lang)}")
 
         if not self.amap_key:
-            st.info("ℹ️ 提示：当前使用模拟数据模式。配置API密钥以使用真实地图数据。")
+            st.info(f"ℹ️ {get_translation('mock_data_notice', lang)}")
 
         # 创建两列布局
         col1, col2 = st.columns([1, 2])
 
         with col1:
-            self._render_search_panel()
+            self._render_search_panel(lang)
 
         with col2:
-            self._render_map()
+            self._render_map(lang)
 
         # 在主区域显示搜索结果
-        self._render_search_results()
+        self._render_search_results(lang)
 
-    def _render_search_panel(self):
+    def _render_search_panel(self, lang):
         """渲染搜索面板"""
-        st.markdown("#### 🔍 搜索菜品")
+        st.markdown(f"#### 🔍 {get_translation('search_dishes', lang)}")
 
         # 搜索输入
         dish_name = st.text_input(
-            "输入菜品名称",
-            placeholder="例如：番茄炒蛋、麻婆豆腐、寿司...",
+            get_translation('dish_name_input', lang),
+            placeholder=get_translation('dish_placeholder', lang),
             key="dish_search_input"
         )
 
         # 搜索选项
-        with st.expander("高级选项", expanded=False):
+        with st.expander(get_translation('advanced_options', lang), expanded=False):
             search_radius = st.slider(
-                "搜索范围（公里）",
+                get_translation('search_radius', lang),
                 min_value=1,
                 max_value=10,
                 value=3,
@@ -86,14 +86,14 @@ class MapSearch:
             )
 
             price_range = st.select_slider(
-                "价格范围",
+                get_translation('price_range', lang),
                 options=["💰", "💰💰", "💰💰💰", "💰💰💰💰"],
                 value="💰💰",
                 key="price_range"
             )
 
             min_rating = st.slider(
-                "最低评分",
+                get_translation('min_rating', lang),
                 min_value=0.0,
                 max_value=5.0,
                 value=3.5,
@@ -105,26 +105,26 @@ class MapSearch:
         btn_col1, btn_col2 = st.columns(2)
         
         with btn_col1:
-            if st.button("🔍 搜索餐厅", type="primary", use_container_width=True):
+            if st.button(f"🔍 {get_translation('search_restaurants', lang)}", type="primary", use_container_width=True):
                 if dish_name:
-                    with st.spinner("正在搜索相关餐厅..."):
-                        self._execute_search(dish_name, st.session_state.get('search_radius', 3))
+                    with st.spinner(get_translation('searching_restaurants', lang)):
+                        self._execute_search(dish_name, st.session_state.get('search_radius', 3), lang)
                 else:
-                    st.warning("请输入菜品名称")
+                    st.warning(get_translation('enter_dish_name', lang))
 
         with btn_col2:
-            if st.button("🎲 随机推荐", use_container_width=True):
-                random_dishes = ["宫保鸡丁", "糖醋排骨", "鱼香肉丝", "麻辣香锅", "寿司", "拉面", "披萨", "汉堡"]
+            if st.button(f"🎲 {get_translation('random_recommend', lang)}", use_container_width=True):
+                random_dishes = get_translation('random_dishes_list', lang).split(',')
                 random_dish = random.choice(random_dishes)
-                st.info(f"🎲 随机推荐：{random_dish}")
-                with st.spinner(f"正在搜索 {random_dish} 相关餐厅..."):
-                    self._execute_search(random_dish, st.session_state.get('search_radius', 3))
+                st.info(f"🎲 {get_translation('random_recommendation', lang)}: {random_dish}")
+                with st.spinner(f"{get_translation('searching_for', lang)} {random_dish} {get_translation('related_restaurants', lang)}"):
+                    self._execute_search(random_dish, st.session_state.get('search_radius', 3), lang)
 
-    def _execute_search(self, dish_name, radius):
+    def _execute_search(self, dish_name, radius, lang):
         """执行搜索"""
         try:
             # 1. AI分析菜品
-            cuisine_info = self._analyze_dish_cuisine(dish_name)
+            cuisine_info = self._analyze_dish_cuisine(dish_name, lang)
             
             # 2. 构建搜索关键词
             keywords = self._build_search_keywords(dish_name, cuisine_info)
@@ -145,47 +145,65 @@ class MapSearch:
             st.session_state.cuisine_info = cuisine_info
             
             if ranked_results:
-                st.success(f"找到 {len(ranked_results)} 家相关餐厅！")
+                st.success(f"{get_translation('found_count', lang)} {len(ranked_results)} {get_translation('related_restaurants', lang)}！")
             else:
-                st.warning("没有找到相关餐厅，请尝试其他关键词。")
+                st.warning(get_translation('no_restaurants_found', lang))
                 
         except Exception as e:
-            st.error(f"搜索失败：{str(e)}")
+            st.error(f"{get_translation('search_failed', lang)}: {str(e)}")
             st.session_state.search_results = []
 
-    def _analyze_dish_cuisine(self, dish_name):
+    def _analyze_dish_cuisine(self, dish_name, lang):
         """分析菜品类型"""
         if self.llm:
             try:
-                return self._ai_analyze_dish(dish_name)
+                return self._ai_analyze_dish(dish_name, lang)
             except:
-                return self._fallback_analyze_dish(dish_name)
+                return self._fallback_analyze_dish(dish_name, lang)
         else:
-            return self._fallback_analyze_dish(dish_name)
+            return self._fallback_analyze_dish(dish_name, lang)
 
-    def _ai_analyze_dish(self, dish_name):
+    def _ai_analyze_dish(self, dish_name, lang):
         """AI分析菜品"""
-        prompt = f"""
-        请分析菜品"{dish_name}"，返回JSON格式的结果：
-        {{
-            "cuisine_type": "菜系类型（如：中餐、日料、韩餐、西餐、火锅等）",
-            "restaurant_types": ["推荐的餐厅类型列表，至少3个"],
-            "search_keywords": ["搜索关键词列表，用于查找相关餐厅"],
-            "dish_characteristics": {{
-                "spicy_level": "辣度（0-5）",
-                "price_range": "价格区间（低/中/高）",
-                "cooking_method": "烹饪方式"
-            }},
-            "similar_dishes": ["相似菜品列表"],
-            "recommended_restaurant_names": ["推荐的餐厅名称模式"]
-        }}
-        只返回JSON，不要其他说明。
-        """
+        if lang == 'zh':
+            prompt = f"""
+            请分析菜品"{dish_name}"，返回JSON格式的结果：
+            {{
+                "cuisine_type": "菜系类型（如：中餐、日料、韩餐、西餐、火锅等）",
+                "restaurant_types": ["推荐的餐厅类型列表，至少3个"],
+                "search_keywords": ["搜索关键词列表，用于查找相关餐厅"],
+                "dish_characteristics": {{
+                    "spicy_level": "辣度（0-5）",
+                    "price_range": "价格区间（低/中/高）",
+                    "cooking_method": "烹饪方式"
+                }},
+                "similar_dishes": ["相似菜品列表"],
+                "recommended_restaurant_names": ["推荐的餐厅名称模式"]
+            }}
+            只返回JSON，不要其他说明。
+            """
+        else:
+            prompt = f"""
+            Please analyze the dish "{dish_name}" and return the result in JSON format:
+            {{
+                "cuisine_type": "cuisine type (e.g., Chinese, Japanese, Korean, Western, Hotpot, etc.)",
+                "restaurant_types": ["list of recommended restaurant types, at least 3"],
+                "search_keywords": ["list of search keywords for finding related restaurants"],
+                "dish_characteristics": {{
+                    "spicy_level": "spice level (0-5)",
+                    "price_range": "price range (Low/Medium/High)",
+                    "cooking_method": "cooking method"
+                }},
+                "similar_dishes": ["list of similar dishes"],
+                "recommended_restaurant_names": ["recommended restaurant name patterns"]
+            }}
+            Return only JSON, no other explanations.
+            """
 
         response = self.llm.client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "你是一个美食专家，擅长分析菜品和推荐餐厅。"},
+                {"role": "system", "content": get_translation('ai_food_expert_prompt', lang)},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
@@ -204,32 +222,41 @@ class MapSearch:
         
         return cuisine_info
 
-    def _fallback_analyze_dish(self, dish_name):
+    def _fallback_analyze_dish(self, dish_name, lang):
         """备用分析方法"""
-        cuisine_rules = {
-            "中餐": ["炒", "煮", "蒸", "炖", "烧", "宫保", "鱼香", "麻婆", "糖醋", "红烧", "麻辣"],
-            "日料": ["寿司", "刺身", "拉面", "天妇罗", "照烧", "味增", "日本", "日式"],
-            "韩餐": ["泡菜", "烤肉", "石锅", "冷面", "拌饭", "韩国", "韩式"],
-            "西餐": ["披萨", "意面", "汉堡", "牛排", "沙拉", "薯条", "西式"],
-            "火锅": ["火锅", "串串", "麻辣烫", "冒菜"]
-        }
+        if lang == 'zh':
+            cuisine_rules = {
+                "中餐": ["炒", "煮", "蒸", "炖", "烧", "宫保", "鱼香", "麻婆", "糖醋", "红烧", "麻辣"],
+                "日料": ["寿司", "刺身", "拉面", "天妇罗", "照烧", "味增", "日本", "日式"],
+                "韩餐": ["泡菜", "烤肉", "石锅", "冷面", "拌饭", "韩国", "韩式"],
+                "西餐": ["披萨", "意面", "汉堡", "牛排", "沙拉", "薯条", "西式"],
+                "火锅": ["火锅", "串串", "麻辣烫", "冒菜"]
+            }
+        else:
+            cuisine_rules = {
+                "Chinese": ["stir-fry", "fried", "steamed", "braised", "kung pao", "mapo", "sweet and sour"],
+                "Japanese": ["sushi", "sashimi", "ramen", "tempura", "teriyaki", "miso", "japanese"],
+                "Korean": ["kimchi", "bbq", "stone bowl", "bibimbap", "korean"],
+                "Western": ["pizza", "pasta", "burger", "steak", "salad", "fries", "western"],
+                "Hotpot": ["hotpot", "hot pot", "spicy pot"]
+            }
 
-        detected_cuisine = "中餐"
-        restaurant_types = ["中餐厅", "中国餐厅"]
+        detected_cuisine = get_translation('chinese_cuisine', lang)
+        restaurant_types = [get_translation('chinese_restaurant', lang), get_translation('china_restaurant', lang)]
 
         for cuisine, keywords in cuisine_rules.items():
-            if any(keyword in dish_name for keyword in keywords):
+            if any(keyword.lower() in dish_name.lower() for keyword in keywords):
                 detected_cuisine = cuisine
-                if cuisine == "中餐":
-                    restaurant_types = ["中餐厅", "中国餐厅", "家常菜", "川菜"]
-                elif cuisine == "日料":
-                    restaurant_types = ["日本料理", "日料", "寿司店"]
-                elif cuisine == "韩餐":
-                    restaurant_types = ["韩国料理", "韩餐", "烤肉店"]
-                elif cuisine == "西餐":
-                    restaurant_types = ["西餐厅", "牛排馆", "披萨店"]
-                elif cuisine == "火锅":
-                    restaurant_types = ["火锅店", "火锅", "串串香"]
+                if cuisine in ["中餐", "Chinese"]:
+                    restaurant_types = [get_translation('chinese_restaurant', lang), get_translation('china_restaurant', lang), get_translation('home_cooking', lang), get_translation('sichuan_cuisine', lang)]
+                elif cuisine in ["日料", "Japanese"]:
+                    restaurant_types = [get_translation('japanese_restaurant', lang), get_translation('japanese_cuisine', lang), get_translation('sushi_restaurant', lang)]
+                elif cuisine in ["韩餐", "Korean"]:
+                    restaurant_types = [get_translation('korean_restaurant', lang), get_translation('korean_cuisine', lang), get_translation('bbq_restaurant', lang)]
+                elif cuisine in ["西餐", "Western"]:
+                    restaurant_types = [get_translation('western_restaurant', lang), get_translation('steakhouse', lang), get_translation('pizza_restaurant', lang)]
+                elif cuisine in ["火锅", "Hotpot"]:
+                    restaurant_types = [get_translation('hotpot_restaurant', lang), get_translation('hotpot', lang), get_translation('spicy_hotpot', lang)]
                 break
 
         return {
@@ -311,19 +338,30 @@ class MapSearch:
 
     def _get_mock_restaurants(self, keyword):
         """生成模拟餐厅数据"""
-        restaurant_templates = {
-            "火锅": ["海底捞火锅", "小龙坎火锅", "蜀大侠火锅", "大龙燚火锅", "德庄火锅"],
-            "川菜": ["眉州东坡", "陈麻婆豆腐", "巴国布衣", "蜀香园", "川味观"],
-            "日料": ["将太无二", "鮨然", "隐泉日料", "一风堂拉面", "味千拉面"],
-            "西餐": ["王品牛排", "豪客来", "必胜客", "萨莉亚", "新元素"],
-            "中餐": ["老北京炸酱面", "东来顺", "全聚德", "便宜坊", "花家怡园"]
-        }
+        lang = st.session_state.get('language', 'zh')
         
-        default_names = [f"老王{keyword}馆", f"{keyword}大师", f"正宗{keyword}", f"{keyword}食府"]
+        if lang == 'zh':
+            restaurant_templates = {
+                "火锅": ["海底捞火锅", "小龙坎火锅", "蜀大侠火锅", "大龙燚火锅", "德庄火锅"],
+                "川菜": ["眉州东坡", "陈麻婆豆腐", "巴国布衣", "蜀香园", "川味观"],
+                "日料": ["将太无二", "鮨然", "隐泉日料", "一风堂拉面", "味千拉面"],
+                "西餐": ["王品牛排", "豪客来", "必胜客", "萨莉亚", "新元素"],
+                "中餐": ["老北京炸酱面", "东来顺", "全聚德", "便宜坊", "花家怡园"]
+            }
+            default_names = [f"老王{keyword}馆", f"{keyword}大师", f"正宗{keyword}", f"{keyword}食府"]
+        else:
+            restaurant_templates = {
+                "hotpot": ["Haidilao Hotpot", "Xiaolongkan Hotpot", "Shu Daxia Hotpot", "Da Longyi Hotpot", "Dezhuang Hotpot"],
+                "chinese": ["Meizhou Dongpo", "Chen Mapo Tofu", "Baguo Buyi", "Shuxiang Garden", "Chuanwei Guan"],
+                "japanese": ["Jiangtai Wu Er", "Sushi Ran", "Hidden Spring Japanese", "Ippudo Ramen", "Ajisen Ramen"],
+                "western": ["Wang Steak", "Houcaller", "Pizza Hut", "Saizeriya", "Element Fresh"],
+                "korean": ["Seoul Kitchen", "Gangnam BBQ", "Kimchi House", "Stone Bowl", "Korea Town"]
+            }
+            default_names = [f"{keyword} House", f"{keyword} Master", f"Authentic {keyword}", f"{keyword} Palace"]
         
         restaurant_names = default_names
         for cuisine, names in restaurant_templates.items():
-            if cuisine in keyword:
+            if cuisine.lower() in keyword.lower():
                 restaurant_names = names
                 break
 
@@ -341,7 +379,7 @@ class MapSearch:
             mock_restaurants.append({
                 'id': f'mock_{keyword}_{i}',
                 'name': name,
-                'address': f"模拟地址 - {random.choice(['东路', '西街', '南巷', '北大道'])}{random.randint(1, 999)}号",
+                'address': f"{get_translation('mock_address', lang)} - {random.choice(get_translation('street_suffixes', lang).split(','))}{random.randint(1, 999)}{get_translation('number_suffix', lang)}",
                 'location': f"{lng},{lat}",
                 'tel': f"{random.choice(['010', '021', '020', '0755'])}-{random.randint(10000000, 99999999)}",
                 'rating': round(random.uniform(3.5, 5.0), 1),
@@ -410,23 +448,23 @@ class MapSearch:
 
         return sorted(results, key=lambda x: x['match_score'], reverse=True)
 
-    def _render_map(self):
+    def _render_map(self, lang):
         """渲染地图"""
-        st.markdown("#### 🗺️ 餐厅位置")
+        st.markdown(f"#### 🗺️ {get_translation('restaurant_locations', lang)}")
 
         # 城市选择
-        cities = ["北京", "上海", "广州", "深圳", "杭州", "成都", "武汉", "西安"]
-        city = st.selectbox("选择城市", cities, key="city_select")
+        cities = get_translation('cities_list', lang).split(',')
+        city = st.selectbox(get_translation('select_city', lang), cities, key="city_select")
 
         city_locations = {
-            "北京": [39.9042, 116.4074],
-            "上海": [31.2304, 121.4737],
-            "广州": [23.1291, 113.2644],
-            "深圳": [22.5431, 114.0579],
-            "杭州": [30.2741, 120.1551],
-            "成都": [30.5728, 104.0668],
-            "武汉": [30.5928, 114.3055],
-            "西安": [34.2658, 108.9541]
+            get_translation('beijing', lang): [39.9042, 116.4074],
+            get_translation('shanghai', lang): [31.2304, 121.4737],
+            get_translation('guangzhou', lang): [23.1291, 113.2644],
+            get_translation('shenzhen', lang): [22.5431, 114.0579],
+            get_translation('hangzhou', lang): [30.2741, 120.1551],
+            get_translation('chengdu', lang): [30.5728, 104.0668],
+            get_translation('wuhan', lang): [30.5928, 114.3055],
+            get_translation('xian', lang): [34.2658, 108.9541]
         }
 
         if city in city_locations:
@@ -444,14 +482,14 @@ class MapSearch:
         # 用户位置标记
         folium.Marker(
             location=self.user_location,
-            popup="您的位置",
-            tooltip="您在这里",
+            popup=get_translation('your_location', lang),
+            tooltip=get_translation('you_are_here', lang),
             icon=folium.Icon(color='green', icon='user', prefix='fa')
         ).add_to(m)
 
         # 餐厅标记
         if st.session_state.search_results:
-            st.info(f"🔍 在地图上显示 {len(st.session_state.search_results)} 个搜索结果")
+            st.info(f"🔍 {get_translation('showing_on_map', lang)} {len(st.session_state.search_results)} {get_translation('search_results_count', lang)}")
             
             bounds = []
             for idx, restaurant in enumerate(st.session_state.search_results[:10]):
@@ -462,10 +500,10 @@ class MapSearch:
                         html = f"""
                         <div style="font-family: Arial; width: 200px;">
                             <h4 style="color: #2196F3; margin: 5px 0;">{restaurant['name']}</h4>
-                            <p style="margin: 5px 0;"><b>地址:</b> {restaurant.get('address', '未知')}</p>
-                            <p style="margin: 5px 0;"><b>评分:</b> ⭐ {restaurant.get('rating', '暂无')}</p>
-                            <p style="margin: 5px 0;"><b>人均:</b> ¥{restaurant.get('avg_price', '未知')}</p>
-                            <p style="margin: 5px 0;"><b>推荐:</b> {restaurant.get('suggested_for', '')}</p>
+                            <p style="margin: 5px 0;"><b>{get_translation('address', lang)}:</b> {restaurant.get('address', get_translation('unknown', lang))}</p>
+                            <p style="margin: 5px 0;"><b>{get_translation('rating', lang)}:</b> ⭐ {restaurant.get('rating', get_translation('no_rating', lang))}</p>
+                            <p style="margin: 5px 0;"><b>{get_translation('avg_price', lang)}:</b> ¥{restaurant.get('avg_price', get_translation('unknown', lang))}</p>
+                            <p style="margin: 5px 0;"><b>{get_translation('recommendation', lang)}:</b> {restaurant.get('suggested_for', '')}</p>
                         </div>
                         """
 
@@ -482,7 +520,7 @@ class MapSearch:
                         bounds.append([lat, lng])
 
                     except Exception as e:
-                        st.warning(f"无法解析餐厅位置: {restaurant['name']}")
+                        st.warning(f"{get_translation('location_parse_error', lang)}: {restaurant['name']}")
 
             if bounds:
                 bounds.append(self.user_location)
@@ -491,49 +529,49 @@ class MapSearch:
         # 显示地图
         st_folium(m, width=700, height=500, key="restaurant_map")
 
-    def _render_search_results(self):
+    def _render_search_results(self, lang):
         """渲染搜索结果"""
         if not st.session_state.search_results:
             return
 
         st.markdown("---")
-        st.markdown("## 🍽️ 搜索结果")
+        st.markdown(f"## 🍽️ {get_translation('search_results', lang)}")
 
         # AI分析结果
         if st.session_state.cuisine_info:
             cuisine_info = st.session_state.cuisine_info
             dish_name = st.session_state.search_dish
 
-            with st.expander("🤖 AI分析结果", expanded=True):
+            with st.expander(f"🤖 {get_translation('ai_analysis_results', lang)}", expanded=True):
                 ai_col1, ai_col2 = st.columns(2)
                 
                 with ai_col1:
-                    st.markdown(f"**搜索菜品**: {dish_name}")
-                    st.markdown(f"**识别菜系**: {cuisine_info['cuisine_type']}")
-                    analysis_method = 'AI智能分析' if cuisine_info.get('analysis_method') == 'deepseek_ai' else '规则匹配'
-                    st.markdown(f"**分析方法**: {analysis_method}")
-                    st.markdown(f"**置信度**: {cuisine_info.get('confidence', 0) * 100:.1f}%")
+                    st.markdown(f"**{get_translation('searched_dish', lang)}**: {dish_name}")
+                    st.markdown(f"**{get_translation('identified_cuisine', lang)}**: {cuisine_info['cuisine_type']}")
+                    analysis_method = get_translation('ai_analysis', lang) if cuisine_info.get('analysis_method') == 'deepseek_ai' else get_translation('rule_matching', lang)
+                    st.markdown(f"**{get_translation('analysis_method', lang)}**: {analysis_method}")
+                    st.markdown(f"**{get_translation('confidence_level', lang)}**: {cuisine_info.get('confidence', 0) * 100:.1f}%")
 
                 with ai_col2:
                     if cuisine_info.get('dish_characteristics'):
                         chars = cuisine_info['dish_characteristics']
-                        st.markdown("**菜品特征**:")
+                        st.markdown(f"**{get_translation('dish_characteristics', lang)}**:")
                         if chars.get('spicy_level'):
                             try:
                                 spicy_num = int(float(chars['spicy_level']))
-                                st.markdown(f"- 辣度: {'🌶️' * spicy_num}")
+                                st.markdown(f"- {get_translation('spicy_level', lang)}: {'🌶️' * spicy_num}")
                             except:
-                                st.markdown(f"- 辣度: {chars['spicy_level']}")
+                                st.markdown(f"- {get_translation('spicy_level', lang)}: {chars['spicy_level']}")
                         if chars.get('price_range'):
-                            st.markdown(f"- 价格: {chars['price_range']}")
+                            st.markdown(f"- {get_translation('price', lang)}: {chars['price_range']}")
                         if chars.get('cooking_method'):
-                            st.markdown(f"- 烹饪: {chars['cooking_method']}")
+                            st.markdown(f"- {get_translation('cooking_method', lang)}: {chars['cooking_method']}")
 
                 if cuisine_info.get('similar_dishes'):
-                    st.markdown(f"**相似菜品**: {', '.join(cuisine_info['similar_dishes'][:5])}")
+                    st.markdown(f"**{get_translation('similar_dishes', lang)}**: {', '.join(cuisine_info['similar_dishes'][:5])}")
 
         # 餐厅列表
-        st.info(f"📊 找到 {len(st.session_state.search_results)} 家相关餐厅")
+        st.info(f"📊 {get_translation('found_count', lang)} {len(st.session_state.search_results)} {get_translation('related_restaurants', lang)}")
 
         for idx, restaurant in enumerate(st.session_state.search_results[:10]):
             with st.container():
@@ -543,9 +581,9 @@ class MapSearch:
                 
                 # 餐厅信息
                 info_parts = []
-                info_parts.append(f"📍 {restaurant.get('address', '地址未知')}")
+                info_parts.append(f"📍 {restaurant.get('address', get_translation('unknown_address', lang))}")
                 info_parts.append(f"⭐ {restaurant.get('rating', 'N/A')}")
-                info_parts.append(f"💰 人均 ¥{restaurant.get('avg_price', 'N/A')}")
+                info_parts.append(f"💰 {get_translation('avg_price', lang)} ¥{restaurant.get('avg_price', 'N/A')}")
                 
                 if 'distance' in restaurant:
                     distance = restaurant['distance']
@@ -560,16 +598,16 @@ class MapSearch:
                 btn_col1, btn_col2, btn_col3, btn_col4 = st.columns(4)
                 
                 with btn_col1:
-                    if st.button("📋 查看详情", key=f"detail_btn_{idx}"):
-                        self._show_restaurant_detail(restaurant, idx)
+                    if st.button(f"📋 {get_translation('view_details', lang)}", key=f"detail_btn_{idx}"):
+                        self._show_restaurant_detail(restaurant, idx, lang)
                 
                 with btn_col2:
-                    if st.button("🧭 导航", key=f"nav_btn_{idx}"):
-                        self._show_navigation(restaurant, idx)
+                    if st.button(f"🧭 {get_translation('navigation', lang)}", key=f"nav_btn_{idx}"):
+                        self._show_navigation(restaurant, idx, lang)
                 
                 with btn_col3:
-                    if st.button("⭐ 收藏", key=f"fav_btn_{idx}"):
-                        self._add_to_favorites(restaurant)
+                    if st.button(f"⭐ {get_translation('favorite', lang)}", key=f"fav_btn_{idx}"):
+                        self._add_to_favorites(restaurant, lang)
                 
                 with btn_col4:
                     if restaurant.get('tel'):
@@ -577,57 +615,57 @@ class MapSearch:
 
                 st.divider()
 
-    def _show_restaurant_detail(self, restaurant, idx):
+    def _show_restaurant_detail(self, restaurant, idx, lang):
         """显示餐厅详情"""
-        with st.expander(f"🍽️ {restaurant['name']} - 详细信息", expanded=True):
+        with st.expander(f"🍽️ {restaurant['name']} - {get_translation('detailed_info', lang)}", expanded=True):
             detail_col1, detail_col2 = st.columns(2)
             
             with detail_col1:
-                st.markdown("**基本信息**")
-                st.write(f"📍 地址: {restaurant.get('address', '未知')}")
-                st.write(f"📞 电话: {restaurant.get('tel', '未知')}")
-                st.write(f"⭐ 评分: {restaurant.get('rating', '暂无')}")
-                st.write(f"💰 人均: ¥{restaurant.get('avg_price', '未知')}")
+                st.markdown(f"**{get_translation('basic_info', lang)}**")
+                st.write(f"📍 {get_translation('address', lang)}: {restaurant.get('address', get_translation('unknown', lang))}")
+                st.write(f"📞 {get_translation('phone', lang)}: {restaurant.get('tel', get_translation('unknown', lang))}")
+                st.write(f"⭐ {get_translation('rating', lang)}: {restaurant.get('rating', get_translation('no_rating', lang))}")
+                st.write(f"💰 {get_translation('avg_price', lang)}: ¥{restaurant.get('avg_price', get_translation('unknown', lang))}")
 
             with detail_col2:
-                st.markdown("**推荐信息**")
-                st.write(f"🍽️ 推荐菜品: {restaurant.get('suggested_for', '')}")
-                st.write(f"🏷️ 菜系匹配: {restaurant.get('cuisine_match', '')}")
+                st.markdown(f"**{get_translation('recommendation_info', lang)}**")
+                st.write(f"🍽️ {get_translation('recommended_dish', lang)}: {restaurant.get('suggested_for', '')}")
+                st.write(f"🏷️ {get_translation('cuisine_match', lang)}: {restaurant.get('cuisine_match', '')}")
                 if restaurant.get('ai_recommended'):
-                    st.write("🤖 AI推荐")
+                    st.write(f"🤖 {get_translation('ai_recommended', lang)}")
                 if 'distance' in restaurant:
                     distance = restaurant['distance']
                     if distance < 1000:
-                        st.write(f"📏 距离: {distance}m")
+                        st.write(f"📏 {get_translation('distance', lang)}: {distance}m")
                     else:
-                        st.write(f"📏 距离: {distance / 1000:.1f}km")
+                        st.write(f"📏 {get_translation('distance', lang)}: {distance / 1000:.1f}km")
 
-    def _show_navigation(self, restaurant, idx):
+    def _show_navigation(self, restaurant, idx, lang):
         """显示导航选项"""
         if 'location' in restaurant:
             location = restaurant['location']
             restaurant_name = restaurant['name']
             
-            with st.expander(f"🚗 {restaurant_name} - 导航选项", expanded=True):
-                st.markdown("**选择导航方式:**")
+            with st.expander(f"🚗 {restaurant_name} - {get_translation('navigation_options', lang)}", expanded=True):
+                st.markdown(f"**{get_translation('choose_navigation', lang)}:**")
 
                 lng, lat = location.split(',')
                 amap_url = f"https://uri.amap.com/navigation?to={location},{restaurant_name}&mode=car&policy=1&src=myapp&coordinate=gaode&callnative=0"
                 baidu_url = f"http://api.map.baidu.com/direction?destination=latlng:{lat},{lng}|name:{restaurant_name}&mode=driving&src=webapp.baidu.openAPIdemo"
                 tx_url = f"https://apis.map.qq.com/uri/v1/routeplan?type=drive&to={restaurant_name}&tocoord={lat},{lng}"
 
-                st.markdown(f"- [📍 高德导航]({amap_url})")
-                st.markdown(f"- [📍 百度导航]({baidu_url})")
-                st.markdown(f"- [📍 腾讯导航]({tx_url})")
+                st.markdown(f"- [📍 {get_translation('amap_navigation', lang)}]({amap_url})")
+                st.markdown(f"- [📍 {get_translation('baidu_navigation', lang)}]({baidu_url})")
+                st.markdown(f"- [📍 {get_translation('tencent_navigation', lang)}]({tx_url})")
 
-    def _add_to_favorites(self, restaurant):
+    def _add_to_favorites(self, restaurant, lang):
         """添加到收藏"""
         if 'favorites' not in st.session_state:
             st.session_state.favorites = []
 
         if not any(fav['id'] == restaurant['id'] for fav in st.session_state.favorites):
             st.session_state.favorites.append(restaurant)
-            st.success(f"已收藏 {restaurant['name']}")
+            st.success(f"{get_translation('favorited', lang)} {restaurant['name']}")
 
             # 如果用户已登录，保存到数据库
             if st.session_state.get('logged_in') and st.session_state.get('db_manager'):
@@ -640,6 +678,6 @@ class MapSearch:
                     }
                     st.session_state.db_manager.save_recipe(st.session_state.username, favorite_data)
                 except Exception as e:
-                    st.warning("收藏保存到云端失败，仅保存在本地")
+                    st.warning(get_translation('cloud_save_failed', lang))
         else:
-            st.warning(f"{restaurant['name']} 已在收藏中")
+            st.warning(f"{restaurant['name']} {get_translation('already_favorited', lang)}")
